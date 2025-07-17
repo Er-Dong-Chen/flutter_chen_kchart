@@ -1,0 +1,17 @@
+name: flutter_chen_kchart
+description: A production-ready, high-performance K-line (candlestick) chart library for Flutter. Supports multiple technical indicators, theme switching, smooth gestures, and is fully customizable. The first open-source commercial K-chart for Flutter.
+version: 1.0.0
+homepage: https://github.com/Er-Dong-Chen/flutter_chen_kchart
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
