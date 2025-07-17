@@ -130,6 +130,11 @@ await _controller.restoreScaleState();
 
 ---
 
+## 捐赠支持（☕️请作者喝杯卡布奇诺，为开发续航！）
+
+## ![KChart 效果预览](https://er-dong-chen.github.io/images/wechat.png)
+![KChart 效果预览](https://er-dong-chen.github.io/images/alipay.png)
+
 ## 📢 结语 / Final Words
 
 > Flutter 终于有了真正可商用的 K线图表库！  
