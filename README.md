@@ -7,6 +7,7 @@
 ## ✨ 特性亮点 / Features
 
 - **原生性能 / Native Performance**：基于 CustomPainter，60fps 丝滑体验
+- **全平台支持 / Cross-Platform**：完美兼容 iOS/Android/Web/Windows/macOS/Linux
 - **多主题支持 / Multiple Themes**：一行切换亮/暗色主题
 - **丰富技术指标 / Rich Indicators**：MA、BOLL、MACD、KDJ、RSI、WR、CCI
 - **极致交互 / Excellent Interaction**：双指缩放、滚轮缩放、平移、长按详情
