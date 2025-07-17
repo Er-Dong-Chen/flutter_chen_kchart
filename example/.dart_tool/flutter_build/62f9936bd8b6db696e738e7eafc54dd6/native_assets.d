@@ -1,0 +1,1 @@
+ /Volumes/aaa/FlutterProjects/flutter_exchange/modules/k_chart/example/.dart_tool/flutter_build/62f9936bd8b6db696e738e7eafc54dd6/native_assets.yaml: 
