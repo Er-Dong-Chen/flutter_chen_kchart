@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_chen_common/flutter_chen_common.dart';
+import 'package:flutter_chen_kchart/k_chart.dart' hide S;
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:flutter_chen_kchart/k_chart.dart' hide S;
 
 class KChartView extends StatefulWidget {
   final String symbol;
@@ -82,7 +82,6 @@ class _KChartViewState extends State<KChartView> {
           });
         }
       };
-      // debugPrint('添加测试绘图工具');
       // _drawingToolManager!.addTestTools();
     }
 
@@ -103,9 +102,6 @@ class _KChartViewState extends State<KChartView> {
     super.didUpdateWidget(oldWidget);
     // 如果symbol发生变化，重新获取K线数据
     if (widget.symbol != oldWidget.symbol) {
-      debugPrint(
-          'KChartView symbol 发生变化: ${oldWidget.symbol} -> ${widget.symbol}');
-
       // 重置状态
       setState(() {
         dataList.clear();
@@ -129,7 +125,6 @@ class _KChartViewState extends State<KChartView> {
 
   @override
   void dispose() {
-    debugPrint('KChartView 销毁，symbol: ${widget.symbol}');
     _timer?.cancel();
     _loadMoreDebounceTimer?.cancel();
     super.dispose();
@@ -146,8 +141,6 @@ class _KChartViewState extends State<KChartView> {
 
   Future<void> fetchDepth() async {
     try {
-      debugPrint('开始获取深度数据，symbol: ${widget.symbol}');
-
       String url =
           'https://api.binance.com/api/v3/depth?symbol=${widget.symbol.toUpperCase()}&limit=500';
       final response = await Dio().get(url);
@@ -170,7 +163,6 @@ class _KChartViewState extends State<KChartView> {
           bids = newBids;
           asks = newAsks;
         });
-        debugPrint('深度数据更新完成，买盘: ${bids.length} 条, 卖盘: ${asks.length} 条');
       }
     } catch (e) {
       debugPrint('获取深度数据失败: $e');
@@ -180,9 +172,6 @@ class _KChartViewState extends State<KChartView> {
   Future<void> fetchKline(bool isLoadMore) async {
     try {
       if (isLoadMore && noMoreHistory) return;
-
-      debugPrint(
-          '开始获取K线数据，symbol:  [32m${widget.symbol} [0m, isLoadMore: $isLoadMore');
 
       if (isLoadMore) {
         setState(() => isLoadingMore = true);
@@ -243,8 +232,6 @@ class _KChartViewState extends State<KChartView> {
         });
         setState(() => isLoading = false);
       }
-
-      debugPrint('K线数据更新完成，共 ${dataList.length} 条数据');
     } catch (e) {
       debugPrint('获取K线数据失败: $e');
       if (mounted) {
@@ -321,54 +308,43 @@ class _KChartViewState extends State<KChartView> {
         if (isNext == true) {
           _chartController.saveScaleState();
           fetchKline(true);
-        } else {
-          debugPrint('滑动到最新数据位置');
         }
       }
     });
   }
 
   void _toggleDrawingTool(DrawingToolType? toolType) {
-    debugPrint('切换绘图工具: $toolType, 当前工具: $_currentDrawingTool');
     setState(() {
       if (_currentDrawingTool == toolType) {
         // 如果点击的是当前工具，则取消绘图模式
         _currentDrawingTool = null;
         _isDrawingMode = false;
         _drawingToolManager?.setCurrentToolType(null);
-        debugPrint('取消绘图工具选择');
       } else {
         // 切换到新的绘图工具
         _currentDrawingTool = toolType;
         _isDrawingMode = toolType != null;
         _drawingToolManager?.setCurrentToolType(toolType);
-        debugPrint('选择绘图工具: $toolType, 绘图模式: $_isDrawingMode');
       }
     });
   }
 
   void _clearAllDrawings() {
-    debugPrint('清除所有绘图工具');
     _drawingToolManager?.clearAllTools();
     setState(() {}); // 强制刷新UI
   }
 
   void _deleteSelectedDrawing() {
-    debugPrint('删除选中的绘图工具');
     _drawingToolManager?.deleteSelectedTool();
     setState(() {}); // 强制刷新UI
   }
 
   void _toggleDrawingMode() {
-    debugPrint('切换绘图模式: 当前状态 $_isDrawingMode -> ${!_isDrawingMode}');
     setState(() {
       _isDrawingMode = !_isDrawingMode;
       if (!_isDrawingMode) {
         _currentDrawingTool = null;
         _drawingToolManager?.setCurrentToolType(null);
-        debugPrint('退出绘图模式，清除当前工具选择');
-      } else {
-        debugPrint('进入绘图模式');
       }
     });
   }

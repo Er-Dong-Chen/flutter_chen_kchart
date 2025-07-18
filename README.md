@@ -1,6 +1,6 @@
 # flutter_chen_kchart
 
-## Flutter 生态首个可商用 K线图表库 / The First Production-Ready K-Line Chart for Flutter
+## Flutter 生态首个达到可商用 K线图表库 / The First Production-Ready K-Line Chart for Flutter
 
 ---
 
@@ -11,10 +11,10 @@
 - **多主题支持 / Multiple Themes**：一行切换亮/暗色主题
 - **丰富技术指标 / Rich Indicators**：MA、BOLL、MACD、KDJ、RSI、WR、CCI
 - **极致交互 / Excellent Interaction**：双指缩放、滚轮缩放、平移、长按详情
-- **自定义样式 / Customizable**：颜色、线宽、字体、布局全可配
 - **国际化 / Internationalization**：多语言支持
 - **性能优化 / Performance**：支持大量数据点不卡顿
 - **绘图工具 / Drawing Tools**：趋势线、箭头、标注等绘图工具（开发中）
+- **自定义样式 / Customizable**：颜色、线宽、字体、布局全可配
 - **持续维护 / Actively Maintained**：第一个正式商用Flutter K线库，长期更新
 
 ---

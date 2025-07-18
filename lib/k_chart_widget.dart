@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -227,12 +226,12 @@ class _KChartWidgetState extends State<KChartWidget>
   double mSelectY = 0.0;
   bool waitingForOtherPairofCords = false;
   bool enableCordRecord = false;
-
   // 绘图工具相关
   late DrawingToolManager _drawingToolManager;
 
   // 优化的缩放功能变量
   double _lastScale = 1.0;
+  double _accumulatedScale = 1.0;
   bool isScale = false, isDrag = false, isLongPress = false, isOnTap = false;
   Offset? _scaleCenter; // 缩放中心点
   AnimationController? _scaleAnimationController;
@@ -280,14 +279,11 @@ class _KChartWidgetState extends State<KChartWidget>
     if (widget.enableDrawingTools) {
       if (widget.drawingToolManager != null) {
         _drawingToolManager = widget.drawingToolManager!;
-        debugPrint('KChartWidget: 使用外部传入的绘图工具管理器');
       } else {
         _drawingToolManager = DrawingToolManager();
-        debugPrint('KChartWidget: 创建新的绘图工具管理器');
       }
 
       _drawingToolManager.onToolsChanged = () {
-        debugPrint('KChartWidget: 绘图工具发生变化，刷新UI');
         if (mounted) setState(() {});
       };
     }
@@ -330,7 +326,6 @@ class _KChartWidgetState extends State<KChartWidget>
 
     // 输入验证
     if (targetScale.isNaN || targetScale.isInfinite) {
-      debugPrint('KChart: Invalid scale value: $targetScale');
       return;
     }
 
@@ -534,9 +529,6 @@ class _KChartWidgetState extends State<KChartWidget>
               : null,
           child: GestureDetector(
             onTapUp: (details) {
-              debugPrint(
-                  'KChartWidget.onTapUp: 绘图模式=$_isDrawingMode, 当前工具=${widget.enableDrawingTools ? _drawingToolManager.currentToolType : "未启用"}');
-
               if (!isLongPress && !isScale) {
                 _stopAnimation();
               }
@@ -544,24 +536,16 @@ class _KChartWidgetState extends State<KChartWidget>
               // 处理绘图工具的点击事件
               if (widget.enableDrawingTools && _isDrawingMode) {
                 final localPosition = details.localPosition;
-                debugPrint(
-                    '绘图模式点击: 位置=$localPosition, 当前工具类型=${_drawingToolManager.currentToolType}');
 
                 if (_drawingToolManager.currentToolType != null) {
                   if (_drawingToolManager.currentDrawingTool == null) {
-                    // 开始绘制新工具
-                    debugPrint('开始绘制新工具');
                     _drawingToolManager.startDrawing(localPosition);
                   } else {
-                    // 完成当前绘制
-                    debugPrint('完成当前绘制');
                     _drawingToolManager.updateDrawing(localPosition);
                     _drawingToolManager.finishDrawing();
                   }
                   return;
                 } else {
-                  // 选择模式 - 选择或移动工具
-                  debugPrint('选择模式');
                   _drawingToolManager.selectTool(localPosition);
                   return;
                 }
@@ -632,21 +616,32 @@ class _KChartWidgetState extends State<KChartWidget>
               if (!widget.enablePinchZoom) return;
               isScale = true;
               _lastScale = mScaleX;
+              _accumulatedScale = 1.0; // 重置累积缩放比例
               _scaleCenter = details.focalPoint;
             },
             onScaleUpdate: (details) {
-              if (!widget.enablePinchZoom || isDrag || isLongPress) return;
-
-              // 优化：只要有缩放就响应，提升灵敏度，非线性放大
-              double delta = details.scale - 1.0;
+              if (!widget.enablePinchZoom) return;
+              if (isLongPress && !isScale) return;
+              // 基于累积增量的缩放算法 - 类似拖拽的增量处理
+              double scaleDelta = details.scale - 1.0;
               double sensitivity = widget.scaleSensitivity;
-              // 非线性放大（1.5次方），让小幅度手势也有明显缩放
-              double factor = delta >= 0
-                  ? 1.0 + (pow(delta.abs(), 1.5) * sensitivity)
-                  : 1.0 - (pow(delta.abs(), 1.5) * sensitivity);
-              final newScale = _lastScale * factor;
-
-              _updateScale(newScale,
+              double accumulatedDelta = scaleDelta * sensitivity;
+              double factor;
+              if (accumulatedDelta >= 0) {
+                factor = 1.0 + (accumulatedDelta * 1.5);
+              } else {
+                factor = 1.0 + (accumulatedDelta * 2.0);
+              }
+              double targetScale = _lastScale * factor;
+              if (_isAtMaxScale && accumulatedDelta < 0) {
+                factor = 1.0 + (accumulatedDelta * 3.0);
+                targetScale = _lastScale * factor;
+              }
+              if (_isAtMinScale && accumulatedDelta > 0) {
+                factor = 1.0 + (accumulatedDelta * 3.0);
+                targetScale = _lastScale * factor;
+              }
+              _updateScale(targetScale,
                   widget.enableScaleCenterPoint ? _scaleCenter : null);
             },
             onScaleEnd: (_) {

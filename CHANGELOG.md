@@ -1,3 +1,6 @@
+## 1.1.0
+* IMPROVED: Gesture interaction and sensitivity response
+
 ## 1.0.0
 * NEW: Enhanced theme system with light/dark theme support
 * NEW: Improved gesture interactions with better pinch-to-zoom and scroll zoom
