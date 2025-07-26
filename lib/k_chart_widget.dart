@@ -231,7 +231,6 @@ class _KChartWidgetState extends State<KChartWidget>
 
   // 优化的缩放功能变量
   double _lastScale = 1.0;
-  double _accumulatedScale = 1.0;
   bool isScale = false, isDrag = false, isLongPress = false, isOnTap = false;
   Offset? _scaleCenter; // 缩放中心点
   AnimationController? _scaleAnimationController;
@@ -616,7 +615,6 @@ class _KChartWidgetState extends State<KChartWidget>
               if (!widget.enablePinchZoom) return;
               isScale = true;
               _lastScale = mScaleX;
-              _accumulatedScale = 1.0; // 重置累积缩放比例
               _scaleCenter = details.focalPoint;
             },
             onScaleUpdate: (details) {

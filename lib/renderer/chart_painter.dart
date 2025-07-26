@@ -576,23 +576,41 @@ class ChartPainter extends BaseChartPainter {
   void drawCrossLine(Canvas canvas, Size size) {
     var index = calculateSelectedX(selectX);
     KLineEntity point = getItem(index);
+
+    // 创建虚线画笔 - 竖线使用与横线相同的颜色
     Paint paintY = Paint()
-      ..color = this.chartColors.vCrossColor
-      ..strokeWidth = this.chartStyle.vCrossWidth
-      ..isAntiAlias = true;
+      ..color = this.chartColors.hCrossColor // 使用与横线相同的颜色
+      ..strokeWidth = this.chartStyle.hCrossWidth // 使用与横线相同的宽度
+      ..isAntiAlias = true
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
     double x = getX(index);
     double y = getMainY(point.close);
-    // k线图竖线
-    canvas.drawLine(Offset(x, mTopPadding),
-        Offset(x, size.height - mBottomPadding), paintY);
+
+    // k线图竖线 - 使用虚线
+    _drawDashedLine(
+      canvas,
+      Offset(x, mTopPadding),
+      Offset(x, size.height - mBottomPadding),
+      paintY,
+    );
 
     Paint paintX = Paint()
       ..color = this.chartColors.hCrossColor
       ..strokeWidth = this.chartStyle.hCrossWidth
-      ..isAntiAlias = true;
-    // k线图横线
-    canvas.drawLine(Offset(-mTranslateX, y),
-        Offset(-mTranslateX + mWidth / scaleX, y), paintX);
+      ..isAntiAlias = true
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    // k线图横线 - 使用虚线
+    _drawDashedLine(
+      canvas,
+      Offset(-mTranslateX, y),
+      Offset(-mTranslateX + mWidth / scaleX, y),
+      paintX,
+    );
+
     if (scaleX >= 1) {
       canvas.drawOval(
           Rect.fromCenter(
@@ -603,6 +621,33 @@ class ChartPainter extends BaseChartPainter {
           Rect.fromCenter(
               center: Offset(x, y), height: 2.0, width: 2.0 / scaleX),
           paintX);
+    }
+  }
+
+  /// 绘制虚线
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
+    const double dashLength = 3.0; // 增加虚线长度
+    const double dashSpace = 3.0; // 增加间距
+
+    final double distance = (end - start).distance;
+    final Offset direction = (end - start) / distance;
+
+    double currentDistance = 0.0;
+    bool drawDash = true;
+
+    while (currentDistance < distance) {
+      final double segmentLength = drawDash ? dashLength : dashSpace;
+      final double nextDistance =
+          (currentDistance + segmentLength).clamp(0.0, distance);
+
+      if (drawDash) {
+        final Offset segmentStart = start + direction * currentDistance;
+        final Offset segmentEnd = start + direction * nextDistance;
+        canvas.drawLine(segmentStart, segmentEnd, paint);
+      }
+
+      currentDistance = nextDistance;
+      drawDash = !drawDash;
     }
   }
 

@@ -196,7 +196,7 @@ class ChartColors {
     colors.infoWindowDnColor = Color(0xffEA4747);
 
     colors.hCrossColor = Color(0xff000000);
-    colors.vCrossColor = Color(0x1E000000);
+    colors.vCrossColor = Color(0xff000000);
     colors.crossTextColor = Color(0xff000000);
 
     colors.maxColor = Color(0xff000000);
@@ -248,7 +248,7 @@ class ChartColors {
     colors.infoWindowDnColor = Color(0xffff0000);
 
     colors.hCrossColor = Color(0xffffffff);
-    colors.vCrossColor = Color(0x1Effffff);
+    colors.vCrossColor = Color(0xffffffff);
     colors.crossTextColor = Color(0xffffffff);
 
     colors.maxColor = Color(0xffffffff);

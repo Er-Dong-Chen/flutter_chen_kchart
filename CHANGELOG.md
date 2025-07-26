@@ -1,3 +1,6 @@
+## 1.2.0
+* IMPROVED: Optimize the selection line
+
 ## 1.1.0
 * IMPROVED: Gesture interaction and sensitivity response
 
