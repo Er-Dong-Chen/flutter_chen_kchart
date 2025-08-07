@@ -25,6 +25,10 @@ abstract class BaseChartPainter extends CustomPainter {
   bool isOnTap;
   bool isLine;
 
+  // 新增：十字线相关
+  bool shouldShowCrossLine;
+  Function(double)? onCrossLineTap;
+
   //3块区域大小与位置
   late Rect mMainRect;
   Rect? mVolRect, mSecondaryRect;
@@ -61,6 +65,8 @@ abstract class BaseChartPainter extends CustomPainter {
     this.isTapShowInfoDialog = false,
     this.secondaryState = SecondaryState.MACD,
     this.isLine = false,
+    this.shouldShowCrossLine = false, // 新增：是否显示十字线
+    this.onCrossLineTap, // 新增：十字线点击回调
   }) {
     mItemCount = datas?.length ?? 0;
     mPointWidth = this.chartStyle.pointWidth;
@@ -121,7 +127,10 @@ abstract class BaseChartPainter extends CustomPainter {
       drawMaxAndMin(canvas);
       drawNowPrice(canvas);
 
-      if (isLongPress == true || (isTapShowInfoDialog && isOnTap)) {
+      if (shouldShowCrossLine ||
+          isLongPress == true ||
+          (isTapShowInfoDialog && isOnTap)) {
+        drawCrossLine(canvas, size);
         drawCrossLineText(canvas, size);
       }
     }

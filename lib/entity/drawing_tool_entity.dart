@@ -68,6 +68,124 @@ abstract class DrawingTool {
 
   // 抽象方法：反序列化
   static DrawingTool? fromJson(Map<String, dynamic> json) => null;
+
+  /// 获取绘制时的Paint对象
+  Paint getPaint({double? opacity}) {
+    return Paint()
+      ..color = color.withOpacity(opacity ?? 1.0)
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..isAntiAlias = true;
+  }
+
+  /// 获取填充Paint对象
+  Paint getFillPaint({double? opacity}) {
+    return Paint()
+      ..color = color.withOpacity(opacity ?? 1.0)
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+  }
+
+  /// 绘制选中状态的视觉反馈
+  void drawSelectionIndicator(Canvas canvas, {double highlightOpacity = 0.3}) {
+    if (state != DrawingToolState.selected) return;
+
+    final bounds = getBounds();
+    if (bounds.isEmpty) return;
+
+    // 绘制高亮背景
+    final highlightPaint = Paint()
+      ..color = color.withOpacity(highlightOpacity)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawRect(bounds.inflate(3.0), highlightPaint);
+
+    // 绘制选中边框
+    final borderPaint = Paint()
+      ..color = Colors.white.withOpacity(0.8)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawRect(bounds.inflate(5.0), borderPaint);
+  }
+
+  /// 计算两点之间的距离
+  static double distanceBetweenPoints(Offset p1, Offset p2) {
+    return (p1 - p2).distance;
+  }
+
+  /// 计算点到线段的距离
+  static double distanceFromPointToLine(
+      Offset point, Offset lineStart, Offset lineEnd) {
+    final a = point.dx - lineStart.dx;
+    final b = point.dy - lineStart.dy;
+    final c = lineEnd.dx - lineStart.dx;
+    final d = lineEnd.dy - lineStart.dy;
+
+    final dot = a * c + b * d;
+    final lenSq = c * c + d * d;
+
+    if (lenSq == 0) return DrawingTool.distanceBetweenPoints(point, lineStart);
+
+    final param = dot / lenSq;
+
+    Offset projection;
+    if (param < 0) {
+      projection = lineStart;
+    } else if (param > 1) {
+      projection = lineEnd;
+    } else {
+      projection = Offset(lineStart.dx + param * c, lineStart.dy + param * d);
+    }
+
+    return DrawingTool.distanceBetweenPoints(point, projection);
+  }
+
+  /// 获取工具类型的显示名称
+  String get displayName {
+    switch (type) {
+      case DrawingToolType.trendLine:
+        return '趋势线';
+      case DrawingToolType.trendAngle:
+        return '趋势角度';
+      case DrawingToolType.arrow:
+        return '箭头';
+      case DrawingToolType.verticalLine:
+        return '垂直线';
+      case DrawingToolType.horizontalLine:
+        return '水平线';
+      case DrawingToolType.horizontalRay:
+        return '水平射线';
+      case DrawingToolType.ray:
+        return '射线';
+      case DrawingToolType.crossLine:
+        return '十字线';
+    }
+  }
+
+  /// 获取工具类型的图标
+  IconData get icon {
+    switch (type) {
+      case DrawingToolType.trendLine:
+        return Icons.trending_up;
+      case DrawingToolType.trendAngle:
+        return Icons.straighten;
+      case DrawingToolType.arrow:
+        return Icons.arrow_forward;
+      case DrawingToolType.verticalLine:
+        return Icons.vertical_align_center;
+      case DrawingToolType.horizontalLine:
+        return Icons.horizontal_rule;
+      case DrawingToolType.horizontalRay:
+        return Icons.arrow_right_alt;
+      case DrawingToolType.ray:
+        return Icons.call_made;
+      case DrawingToolType.crossLine:
+        return Icons.add;
+    }
+  }
 }
 
 // 趋势线
@@ -97,16 +215,22 @@ class TrendLineTool extends DrawingTool {
   void draw(Canvas canvas, Size size, double scaleX, double scrollX,
       double Function(double) getX, double Function(double) getY) {
     debugPrint(
-        'TrendLineTool.draw: startPoint=$startPoint, endPoint=$endPoint, 完成状态=$isComplete');
+        'TrendLineTool.draw: startPoint=$startPoint, endPoint=$endPoint, 完成状态=$isComplete, 状态=$state');
 
     final paint = Paint()
-      ..color = color
+      ..color = color.withOpacity(state == DrawingToolState.drawing ? 0.6 : 1.0)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
     if (startPoint != null && endPoint != null) {
-      debugPrint('绘制趋势线: 从 $startPoint 到 $endPoint');
-      canvas.drawLine(startPoint!, endPoint!, paint);
+      debugPrint('绘制完整趋势线: 从 $startPoint 到 $endPoint');
+
+      // 如果是预览状态，绘制虚线
+      if (state == DrawingToolState.drawing) {
+        _drawDashedLine(canvas, startPoint!, endPoint!, paint);
+      } else {
+        canvas.drawLine(startPoint!, endPoint!, paint);
+      }
 
       // 如果需要延伸
       if (extendLeft || extendRight) {
@@ -128,9 +252,32 @@ class TrendLineTool extends DrawingTool {
     } else if (startPoint != null) {
       debugPrint('绘制趋势线起点: $startPoint');
       // 绘制起点标记
-      canvas.drawCircle(startPoint!, 3.0, paint);
+      canvas.drawCircle(startPoint!, 4.0, paint..style = PaintingStyle.fill);
+
+      // 绘制起点周围的小圆圈指示器
+      canvas.drawCircle(startPoint!, 6.0, paint..style = PaintingStyle.stroke);
     } else {
       debugPrint('TrendLineTool.draw: 没有可绘制的点');
+    }
+  }
+
+  /// 绘制虚线
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
+    const double dashWidth = 5.0;
+    const double dashSpace = 3.0;
+    double distance = (end - start).distance;
+    double dashCount = (distance / (dashWidth + dashSpace)).floor().toDouble();
+
+    for (int i = 0; i < dashCount; ++i) {
+      double startOffset = i * (dashWidth + dashSpace);
+      double endOffset = startOffset + dashWidth;
+
+      if (endOffset > distance) endOffset = distance;
+
+      Offset dashStart = start + (end - start) * (startOffset / distance);
+      Offset dashEnd = start + (end - start) * (endOffset / distance);
+
+      canvas.drawLine(dashStart, dashEnd, paint);
     }
   }
 
@@ -140,34 +287,9 @@ class TrendLineTool extends DrawingTool {
 
     // 简单的线段点击检测
     const tolerance = 5.0;
-    final distance = _distanceFromPointToLine(point, startPoint!, endPoint!);
+    final distance =
+        DrawingTool.distanceFromPointToLine(point, startPoint!, endPoint!);
     return distance <= tolerance;
-  }
-
-  double _distanceFromPointToLine(
-      Offset point, Offset lineStart, Offset lineEnd) {
-    final a = point.dx - lineStart.dx;
-    final b = point.dy - lineStart.dy;
-    final c = lineEnd.dx - lineStart.dx;
-    final d = lineEnd.dy - lineStart.dy;
-
-    final dot = a * c + b * d;
-    final lenSq = c * c + d * d;
-
-    if (lenSq == 0) return (point - lineStart).distance;
-
-    final param = dot / lenSq;
-
-    Offset projection;
-    if (param < 0) {
-      projection = lineStart;
-    } else if (param > 1) {
-      projection = lineEnd;
-    } else {
-      projection = Offset(lineStart.dx + param * c, lineStart.dy + param * d);
-    }
-
-    return (point - projection).distance;
   }
 
   @override
@@ -247,30 +369,71 @@ class TrendAngleTool extends DrawingTool {
   @override
   void draw(Canvas canvas, Size size, double scaleX, double scrollX,
       double Function(double) getX, double Function(double) getY) {
-    if (startPoint == null || endPoint == null) return;
+    debugPrint(
+        'TrendAngleTool.draw: startPoint=$startPoint, endPoint=$endPoint, 状态=$state');
 
     final paint = Paint()
-      ..color = color
+      ..color = color.withOpacity(state == DrawingToolState.drawing ? 0.6 : 1.0)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
-    // 绘制趋势线
-    canvas.drawLine(startPoint!, endPoint!, paint);
+    if (startPoint != null && endPoint != null) {
+      debugPrint('绘制趋势角度线: 从 $startPoint 到 $endPoint');
 
-    // 计算并显示角度
-    if (angle != null) {
-      final center = Offset((startPoint!.dx + endPoint!.dx) / 2,
-          (startPoint!.dy + endPoint!.dy) / 2);
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: '${angle!.toStringAsFixed(1)}°',
-          style: TextStyle(color: color, fontSize: 12),
-        ),
-        textDirection: TextDirection.ltr,
-      );
-      textPainter.layout();
-      textPainter.paint(canvas,
-          center - Offset(textPainter.width / 2, textPainter.height / 2));
+      // 如果是预览状态，绘制虚线
+      if (state == DrawingToolState.drawing) {
+        _drawDashedLine(canvas, startPoint!, endPoint!, paint);
+      } else {
+        // 绘制趋势线
+        canvas.drawLine(startPoint!, endPoint!, paint);
+
+        // 绘制水平线（从起点画一条水平线到终点的X坐标）
+        final horizontalEndPoint = Offset(endPoint!.dx, startPoint!.dy);
+        canvas.drawLine(startPoint!, horizontalEndPoint, paint);
+      }
+
+      // 计算并显示角度
+      if (angle != null) {
+        final center = Offset((startPoint!.dx + endPoint!.dx) / 2,
+            (startPoint!.dy + endPoint!.dy) / 2);
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: '${angle!.toStringAsFixed(1)}°',
+            style: TextStyle(color: color, fontSize: 12),
+          ),
+          textDirection: TextDirection.ltr,
+        );
+        textPainter.layout();
+        textPainter.paint(canvas,
+            center - Offset(textPainter.width / 2, textPainter.height / 2));
+      }
+    } else if (startPoint != null) {
+      debugPrint('绘制趋势角度起点: $startPoint');
+      // 绘制起点标记
+      canvas.drawCircle(startPoint!, 4.0, paint..style = PaintingStyle.fill);
+
+      // 绘制起点周围的小圆圈指示器
+      canvas.drawCircle(startPoint!, 6.0, paint..style = PaintingStyle.stroke);
+    }
+  }
+
+  /// 绘制虚线
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
+    const double dashWidth = 5.0;
+    const double dashSpace = 3.0;
+    double distance = (end - start).distance;
+    double dashCount = (distance / (dashWidth + dashSpace)).floor().toDouble();
+
+    for (int i = 0; i < dashCount; ++i) {
+      double startOffset = i * (dashWidth + dashSpace);
+      double endOffset = startOffset + dashWidth;
+
+      if (endOffset > distance) endOffset = distance;
+
+      Offset dashStart = start + (end - start) * (startOffset / distance);
+      Offset dashEnd = start + (end - start) * (endOffset / distance);
+
+      canvas.drawLine(dashStart, dashEnd, paint);
     }
   }
 
@@ -278,34 +441,9 @@ class TrendAngleTool extends DrawingTool {
   bool hitTest(Offset point) {
     if (startPoint == null || endPoint == null) return false;
     const tolerance = 5.0;
-    final distance = _distanceFromPointToLine(point, startPoint!, endPoint!);
+    final distance =
+        DrawingTool.distanceFromPointToLine(point, startPoint!, endPoint!);
     return distance <= tolerance;
-  }
-
-  double _distanceFromPointToLine(
-      Offset point, Offset lineStart, Offset lineEnd) {
-    final a = point.dx - lineStart.dx;
-    final b = point.dy - lineStart.dy;
-    final c = lineEnd.dx - lineStart.dx;
-    final d = lineEnd.dy - lineStart.dy;
-
-    final dot = a * c + b * d;
-    final lenSq = c * c + d * d;
-
-    if (lenSq == 0) return (point - lineStart).distance;
-
-    final param = dot / lenSq;
-
-    Offset projection;
-    if (param < 0) {
-      projection = lineStart;
-    } else if (param > 1) {
-      projection = lineEnd;
-    } else {
-      projection = Offset(lineStart.dx + param * c, lineStart.dy + param * d);
-    }
-
-    return (point - projection).distance;
   }
 
   @override
@@ -382,60 +520,77 @@ class ArrowTool extends DrawingTool {
   @override
   void draw(Canvas canvas, Size size, double scaleX, double scrollX,
       double Function(double) getX, double Function(double) getY) {
-    if (startPoint == null || endPoint == null) return;
+    debugPrint(
+        'ArrowTool.draw: startPoint=$startPoint, endPoint=$endPoint, 状态=$state');
 
     final paint = Paint()
-      ..color = color
+      ..color = color.withOpacity(state == DrawingToolState.drawing ? 0.6 : 1.0)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
-    // 绘制箭头主体
-    canvas.drawLine(startPoint!, endPoint!, paint);
+    if (startPoint != null && endPoint != null) {
+      debugPrint('绘制完整箭头: 从 $startPoint 到 $endPoint');
 
-    // 计算箭头头部
-    final direction = (endPoint! - startPoint!).direction;
-    final arrowHead1 =
-        endPoint! + Offset.fromDirection(direction + 2.5, arrowHeadSize);
-    final arrowHead2 =
-        endPoint! + Offset.fromDirection(direction - 2.5, arrowHeadSize);
+      // 如果是预览状态，绘制虚线
+      if (state == DrawingToolState.drawing) {
+        _drawDashedLine(canvas, startPoint!, endPoint!, paint);
+      } else {
+        // 绘制箭头主体
+        canvas.drawLine(startPoint!, endPoint!, paint);
+      }
 
-    // 绘制箭头头部
-    canvas.drawLine(endPoint!, arrowHead1, paint);
-    canvas.drawLine(endPoint!, arrowHead2, paint);
+      // 计算箭头头部
+      final direction = (endPoint! - startPoint!).direction;
+      final arrowHead1 =
+          endPoint! + Offset.fromDirection(direction + 2.5, arrowHeadSize);
+      final arrowHead2 =
+          endPoint! + Offset.fromDirection(direction - 2.5, arrowHeadSize);
+
+      // 绘制箭头头部
+      if (state == DrawingToolState.drawing) {
+        _drawDashedLine(canvas, endPoint!, arrowHead1, paint);
+        _drawDashedLine(canvas, endPoint!, arrowHead2, paint);
+      } else {
+        canvas.drawLine(endPoint!, arrowHead1, paint);
+        canvas.drawLine(endPoint!, arrowHead2, paint);
+      }
+    } else if (startPoint != null) {
+      debugPrint('绘制箭头起点: $startPoint');
+      // 绘制起点标记
+      canvas.drawCircle(startPoint!, 4.0, paint..style = PaintingStyle.fill);
+
+      // 绘制起点周围的小圆圈指示器
+      canvas.drawCircle(startPoint!, 6.0, paint..style = PaintingStyle.stroke);
+    }
+  }
+
+  /// 绘制虚线
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
+    const double dashWidth = 5.0;
+    const double dashSpace = 3.0;
+    double distance = (end - start).distance;
+    double dashCount = (distance / (dashWidth + dashSpace)).floor().toDouble();
+
+    for (int i = 0; i < dashCount; ++i) {
+      double startOffset = i * (dashWidth + dashSpace);
+      double endOffset = startOffset + dashWidth;
+
+      if (endOffset > distance) endOffset = distance;
+
+      Offset dashStart = start + (end - start) * (startOffset / distance);
+      Offset dashEnd = start + (end - start) * (endOffset / distance);
+
+      canvas.drawLine(dashStart, dashEnd, paint);
+    }
   }
 
   @override
   bool hitTest(Offset point) {
     if (startPoint == null || endPoint == null) return false;
     const tolerance = 5.0;
-    final distance = _distanceFromPointToLine(point, startPoint!, endPoint!);
+    final distance =
+        DrawingTool.distanceFromPointToLine(point, startPoint!, endPoint!);
     return distance <= tolerance;
-  }
-
-  double _distanceFromPointToLine(
-      Offset point, Offset lineStart, Offset lineEnd) {
-    final a = point.dx - lineStart.dx;
-    final b = point.dy - lineStart.dy;
-    final c = lineEnd.dx - lineStart.dx;
-    final d = lineEnd.dy - lineStart.dy;
-
-    final dot = a * c + b * d;
-    final lenSq = c * c + d * d;
-
-    if (lenSq == 0) return (point - lineStart).distance;
-
-    final param = dot / lenSq;
-
-    Offset projection;
-    if (param < 0) {
-      projection = lineStart;
-    } else if (param > 1) {
-      projection = lineEnd;
-    } else {
-      projection = Offset(lineStart.dx + param * c, lineStart.dy + param * d);
-    }
-
-    return (point - projection).distance;
   }
 
   @override
@@ -511,15 +666,41 @@ class VerticalLineTool extends DrawingTool {
     if (xPosition == null) return;
 
     final paint = Paint()
-      ..color = color
+      ..color = color.withOpacity(state == DrawingToolState.drawing ? 0.6 : 1.0)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
-    canvas.drawLine(
-      Offset(xPosition!, 0),
-      Offset(xPosition!, size.height),
-      paint,
-    );
+    // 如果是预览状态，绘制虚线效果
+    if (state == DrawingToolState.drawing) {
+      _drawDashedLine(canvas, Offset(xPosition!, 0),
+          Offset(xPosition!, size.height), paint);
+    } else {
+      canvas.drawLine(
+        Offset(xPosition!, 0),
+        Offset(xPosition!, size.height),
+        paint,
+      );
+    }
+  }
+
+  /// 绘制虚线
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
+    const double dashWidth = 5.0;
+    const double dashSpace = 3.0;
+    double distance = (end - start).distance;
+    double dashCount = (distance / (dashWidth + dashSpace)).floor().toDouble();
+
+    for (int i = 0; i < dashCount; ++i) {
+      double startOffset = i * (dashWidth + dashSpace);
+      double endOffset = startOffset + dashWidth;
+
+      if (endOffset > distance) endOffset = distance;
+
+      Offset dashStart = start + (end - start) * (startOffset / distance);
+      Offset dashEnd = start + (end - start) * (endOffset / distance);
+
+      canvas.drawLine(dashStart, dashEnd, paint);
+    }
   }
 
   @override
@@ -601,20 +782,26 @@ class HorizontalLineTool extends DrawingTool {
     }
 
     final paint = Paint()
-      ..color = color
+      ..color = color.withOpacity(state == DrawingToolState.drawing ? 0.6 : 1.0)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
-    // 绘制横跨整个图表的水平线
-    debugPrint('绘制水平线: y=$yPosition, 宽度=${size.width}');
-    canvas.drawLine(
-      Offset(0, yPosition!),
-      Offset(size.width, yPosition!),
-      paint,
-    );
+    // 如果是预览状态，绘制虚线效果
+    if (state == DrawingToolState.drawing) {
+      _drawDashedLine(
+          canvas, Offset(0, yPosition!), Offset(size.width, yPosition!), paint);
+    } else {
+      // 绘制横跨整个图表的水平线
+      debugPrint('绘制水平线: y=$yPosition, 宽度=${size.width}');
+      canvas.drawLine(
+        Offset(0, yPosition!),
+        Offset(size.width, yPosition!),
+        paint,
+      );
+    }
 
-    // 绘制价格标签
-    if (priceLevel != null) {
+    // 绘制价格标签（仅在非预览状态）
+    if (priceLevel != null && state != DrawingToolState.drawing) {
       final textPainter = TextPainter(
         text: TextSpan(
           text: priceLevel!.toStringAsFixed(2),
@@ -627,6 +814,26 @@ class HorizontalLineTool extends DrawingTool {
           canvas,
           Offset(size.width - textPainter.width - 5,
               yPosition! - textPainter.height / 2));
+    }
+  }
+
+  /// 绘制虚线
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
+    const double dashWidth = 5.0;
+    const double dashSpace = 3.0;
+    double distance = (end - start).distance;
+    double dashCount = (distance / (dashWidth + dashSpace)).floor().toDouble();
+
+    for (int i = 0; i < dashCount; ++i) {
+      double startOffset = i * (dashWidth + dashSpace);
+      double endOffset = startOffset + dashWidth;
+
+      if (endOffset > distance) endOffset = distance;
+
+      Offset dashStart = start + (end - start) * (startOffset / distance);
+      Offset dashEnd = start + (end - start) * (endOffset / distance);
+
+      canvas.drawLine(dashStart, dashEnd, paint);
     }
   }
 
@@ -678,13 +885,15 @@ class HorizontalLineTool extends DrawingTool {
 
 // 水平射线工具
 class HorizontalRayTool extends DrawingTool {
-  Offset? startPoint;
-  double? direction; // 方向：1为向右，-1为向左
+  double? yPosition; // 水平射线的Y位置（价格位置）
+  double? centerX; // 中心点的X坐标
+  double? priceValue; // 实际的价格值
 
   HorizontalRayTool({
     required String id,
-    this.startPoint,
-    this.direction,
+    this.yPosition,
+    this.centerX,
+    this.priceValue,
     Color color = const Color(0xFF00BFFF),
     double strokeWidth = 2.0,
   }) : super(
@@ -696,59 +905,164 @@ class HorizontalRayTool extends DrawingTool {
         );
 
   @override
+  bool get isComplete => yPosition != null && centerX != null;
+
+  @override
+  String get displayName => '水平射线';
+
+  @override
   void draw(Canvas canvas, Size size, double scaleX, double scrollX,
       double Function(double) getX, double Function(double) getY) {
-    if (startPoint == null || direction == null) return;
+    debugPrint(
+        'HorizontalRayTool.draw: yPosition=$yPosition, centerX=$centerX, 状态=$state');
+
+    if (yPosition == null || centerX == null) return;
 
     final paint = Paint()
-      ..color = color
+      ..color = color.withOpacity(state == DrawingToolState.drawing ? 0.6 : 1.0)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
-    // 绘制水平射线
-    final endX = (direction! > 0 ? size.width : 0).toDouble();
-    canvas.drawLine(
-      startPoint!,
-      Offset(endX, startPoint!.dy),
-      paint,
+    // 水平射线从右边界到中心点绘制
+    final startPoint = Offset(size.width, yPosition!);
+    final endPoint = Offset(centerX!, yPosition!);
+
+    debugPrint('绘制水平射线: 从右边 $startPoint 到中心点 $endPoint');
+
+    // 如果是预览状态，绘制虚线
+    if (state == DrawingToolState.drawing) {
+      _drawDashedLine(canvas, startPoint, endPoint, paint);
+    } else {
+      canvas.drawLine(startPoint, endPoint, paint);
+    }
+
+    // 在右侧绘制价格标签（显示实际的价格值）
+    if (state != DrawingToolState.drawing && priceValue != null) {
+      _drawPriceLabel(canvas, size, priceValue!);
+    }
+  }
+
+  /// 绘制价格标签
+  void _drawPriceLabel(Canvas canvas, Size size, double price) {
+    // 计算价格文本
+    final priceText = price.toStringAsFixed(2);
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: priceText,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
     );
+    textPainter.layout();
+
+    // 在右侧绘制价格标签背景
+    final labelWidth = textPainter.width + 8;
+    final labelHeight = textPainter.height + 4;
+    final labelRect = Rect.fromLTWH(
+      size.width - labelWidth,
+      yPosition! - labelHeight / 2,
+      labelWidth,
+      labelHeight,
+    );
+
+    // 绘制标签背景
+    final labelPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    canvas.drawRect(labelRect, labelPaint);
+
+    // 绘制价格文本
+    textPainter.paint(
+      canvas,
+      Offset(
+        size.width - labelWidth + 4,
+        yPosition! - textPainter.height / 2,
+      ),
+    );
+  }
+
+  /// 绘制虚线
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
+    const double dashWidth = 5.0;
+    const double dashSpace = 3.0;
+    double distance = (end - start).distance;
+    double dashCount = (distance / (dashWidth + dashSpace)).floor().toDouble();
+
+    for (int i = 0; i < dashCount; ++i) {
+      double startOffset = i * (dashWidth + dashSpace);
+      double endOffset = startOffset + dashWidth;
+
+      if (endOffset > distance) endOffset = distance;
+
+      Offset dashStart = start + (end - start) * (startOffset / distance);
+      Offset dashEnd = start + (end - start) * (endOffset / distance);
+
+      canvas.drawLine(dashStart, dashEnd, paint);
+    }
   }
 
   @override
   bool hitTest(Offset point) {
-    if (startPoint == null) return false;
+    if (yPosition == null || centerX == null) return false;
     const tolerance = 5.0;
-    return (point.dy - startPoint!.dy).abs() <= tolerance &&
-        ((direction! > 0 && point.dx >= startPoint!.dx) ||
-            (direction! < 0 && point.dx <= startPoint!.dx));
+    // 检测点击是否在射线上（从centerX到右边界）
+    return (point.dy - yPosition!).abs() <= tolerance &&
+        point.dx >= centerX! - tolerance;
   }
 
   @override
   Rect getBounds() {
-    if (startPoint == null) return Rect.zero;
+    if (yPosition == null || centerX == null) return Rect.zero;
     return Rect.fromLTWH(
-        0, startPoint!.dy - strokeWidth / 2, double.infinity, strokeWidth);
+        centerX!, yPosition! - strokeWidth / 2, double.infinity, strokeWidth);
   }
 
   @override
   void move(Offset delta) {
-    if (startPoint != null) startPoint = startPoint! + delta;
+    if (yPosition != null) {
+      yPosition = yPosition! + delta.dy;
+    }
+    if (centerX != null) {
+      centerX = centerX! + delta.dx;
+    }
   }
 
   @override
-  bool get isComplete => startPoint != null && direction != null;
+  DrawingTool copyWith({
+    String? id,
+    Color? color,
+    double? strokeWidth,
+    bool? isVisible,
+    DrawingToolState? state,
+  }) {
+    return HorizontalRayTool(
+      id: id ?? this.id,
+      yPosition: yPosition,
+      centerX: centerX,
+      priceValue: priceValue,
+      color: color ?? this.color,
+      strokeWidth: strokeWidth ?? this.strokeWidth,
+    )
+      ..isVisible = isVisible ?? this.isVisible
+      ..state = state ?? this.state;
+  }
 
   @override
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'type': type.index,
-      'startPoint': startPoint != null
-          ? {'x': startPoint!.dx, 'y': startPoint!.dy}
-          : null,
-      'direction': direction,
+      'type': type.name,
+      'yPosition': yPosition,
+      'centerX': centerX,
+      'priceValue': priceValue,
       'color': color.value,
       'strokeWidth': strokeWidth,
+      'isVisible': isVisible,
       'createTime': createTime.millisecondsSinceEpoch,
     };
   }
@@ -756,13 +1070,12 @@ class HorizontalRayTool extends DrawingTool {
   static HorizontalRayTool fromJson(Map<String, dynamic> json) {
     return HorizontalRayTool(
       id: json['id'],
-      startPoint: json['startPoint'] != null
-          ? Offset(json['startPoint']['x'], json['startPoint']['y'])
-          : null,
-      direction: json['direction'],
-      color: Color(json['color']),
-      strokeWidth: json['strokeWidth'],
-    );
+      yPosition: json['yPosition']?.toDouble(),
+      centerX: json['centerX']?.toDouble(),
+      priceValue: json['priceValue']?.toDouble(),
+      color: Color(json['color'] ?? 0xFF00BFFF),
+      strokeWidth: json['strokeWidth']?.toDouble() ?? 2.0,
+    )..isVisible = json['isVisible'] ?? true;
   }
 }
 
@@ -788,20 +1101,59 @@ class RayTool extends DrawingTool {
   @override
   void draw(Canvas canvas, Size size, double scaleX, double scrollX,
       double Function(double) getX, double Function(double) getY) {
-    if (startPoint == null || directionPoint == null) return;
+    debugPrint(
+        'RayTool.draw: startPoint=$startPoint, directionPoint=$directionPoint, 状态=$state');
 
     final paint = Paint()
-      ..color = color
+      ..color = color.withOpacity(state == DrawingToolState.drawing ? 0.6 : 1.0)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
-    // 计算射线方向
-    final direction = (directionPoint! - startPoint!).direction;
-    final length = size.width + size.height; // 足够长的射线
+    if (startPoint != null && directionPoint != null) {
+      debugPrint('绘制射线: 从 $startPoint 到方向 $directionPoint');
 
-    // 绘制射线
-    final endPoint = startPoint! + Offset.fromDirection(direction, length);
-    canvas.drawLine(startPoint!, endPoint, paint);
+      // 计算射线方向
+      final direction = (directionPoint! - startPoint!).direction;
+      final length = size.width + size.height; // 足够长的射线
+
+      // 计算射线终点
+      final endPoint = startPoint! + Offset.fromDirection(direction, length);
+
+      // 如果是预览状态，绘制虚线
+      if (state == DrawingToolState.drawing) {
+        _drawDashedLine(canvas, startPoint!, endPoint, paint);
+      } else {
+        // 绘制射线
+        canvas.drawLine(startPoint!, endPoint, paint);
+      }
+    } else if (startPoint != null) {
+      debugPrint('绘制射线起点: $startPoint');
+      // 绘制起点标记
+      canvas.drawCircle(startPoint!, 4.0, paint..style = PaintingStyle.fill);
+
+      // 绘制起点周围的小圆圈指示器
+      canvas.drawCircle(startPoint!, 6.0, paint..style = PaintingStyle.stroke);
+    }
+  }
+
+  /// 绘制虚线
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
+    const double dashWidth = 5.0;
+    const double dashSpace = 3.0;
+    double distance = (end - start).distance;
+    double dashCount = (distance / (dashWidth + dashSpace)).floor().toDouble();
+
+    for (int i = 0; i < dashCount; ++i) {
+      double startOffset = i * (dashWidth + dashSpace);
+      double endOffset = startOffset + dashWidth;
+
+      if (endOffset > distance) endOffset = distance;
+
+      Offset dashStart = start + (end - start) * (startOffset / distance);
+      Offset dashEnd = start + (end - start) * (endOffset / distance);
+
+      canvas.drawLine(dashStart, dashEnd, paint);
+    }
   }
 
   @override
@@ -823,7 +1175,7 @@ class RayTool extends DrawingTool {
             .toDouble();
     final rayPoint = rayStart + rayVector * projection;
 
-    return (point - rayPoint).distance;
+    return DrawingTool.distanceBetweenPoints(point, rayPoint);
   }
 
   @override
@@ -896,23 +1248,54 @@ class CrossLineTool extends DrawingTool {
     if (centerPoint == null) return;
 
     final paint = Paint()
-      ..color = color
+      ..color = color.withOpacity(state == DrawingToolState.drawing ? 0.6 : 1.0)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
-    // 绘制垂直线
-    canvas.drawLine(
-      Offset(centerPoint!.dx, 0),
-      Offset(centerPoint!.dx, size.height),
-      paint,
-    );
+    // 如果是预览状态，绘制虚线效果
+    if (state == DrawingToolState.drawing) {
+      // 绘制虚线垂直线
+      _drawDashedLine(canvas, Offset(centerPoint!.dx, 0),
+          Offset(centerPoint!.dx, size.height), paint);
 
-    // 绘制水平线
-    canvas.drawLine(
-      Offset(0, centerPoint!.dy),
-      Offset(size.width, centerPoint!.dy),
-      paint,
-    );
+      // 绘制虚线水平线
+      _drawDashedLine(canvas, Offset(0, centerPoint!.dy),
+          Offset(size.width, centerPoint!.dy), paint);
+    } else {
+      // 绘制垂直线
+      canvas.drawLine(
+        Offset(centerPoint!.dx, 0),
+        Offset(centerPoint!.dx, size.height),
+        paint,
+      );
+
+      // 绘制水平线
+      canvas.drawLine(
+        Offset(0, centerPoint!.dy),
+        Offset(size.width, centerPoint!.dy),
+        paint,
+      );
+    }
+  }
+
+  /// 绘制虚线
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
+    const double dashWidth = 5.0;
+    const double dashSpace = 3.0;
+    double distance = (end - start).distance;
+    double dashCount = (distance / (dashWidth + dashSpace)).floor().toDouble();
+
+    for (int i = 0; i < dashCount; ++i) {
+      double startOffset = i * (dashWidth + dashSpace);
+      double endOffset = startOffset + dashWidth;
+
+      if (endOffset > distance) endOffset = distance;
+
+      Offset dashStart = start + (end - start) * (startOffset / distance);
+      Offset dashEnd = start + (end - start) * (endOffset / distance);
+
+      canvas.drawLine(dashStart, dashEnd, paint);
+    }
   }
 
   @override

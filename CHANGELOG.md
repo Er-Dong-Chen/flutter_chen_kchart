@@ -1,3 +1,10 @@
+## 2.0.0
+* Added: Professional drawing tools including Trend Line, Trend Angle, Arrow, Vertical Line, Horizontal Line, Horizontal Ray, Ray, and Cross Line.
+* Added: Interactive modes for drawing tools: TradingView-style crosshair selection, continuous drawing mode, magnet snapping mode, show/hide drawings, clear all drawings, and precise positioning control.
+* Added: Vibration feedback during interactions.
+* Added: Cross line label that indicates the fluctuation range.
+* Added: Click callback on cross line label for quick order placement.
+
 ## 1.2.0
 * IMPROVED: Optimize the selection line
 
