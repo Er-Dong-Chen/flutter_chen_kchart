@@ -1,7 +1,7 @@
 import 'package:example/widget.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_chen_kchart/k_chart.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 void main() {
   runApp(const MyApp());
@@ -95,6 +95,51 @@ class _KChartPageState extends State<KChartPage> {
           ),
         ],
       ),
+      // body: SafeArea(
+      //   child: Column(
+      //     children: [
+      //       // 页面选择按钮
+      //       Container(
+      //         padding: const EdgeInsets.all(16),
+      //         child: Row(
+      //           children: [
+      //             Expanded(
+      //               child: ElevatedButton(
+      //                 onPressed: () {
+      //                   Navigator.push(
+      //                     context,
+      //                     MaterialPageRoute(
+      //                       builder: (context) => const EnhancedKChartExample(),
+      //                     ),
+      //                   );
+      //                 },
+      //                 child: const Text('完整示例'),
+      //               ),
+      //             ),
+      //             const SizedBox(width: 16),
+      //             Expanded(
+      //               child: ElevatedButton(
+      //                 onPressed: () {
+      //                   Navigator.push(
+      //                     context,
+      //                     MaterialPageRoute(
+      //                       builder: (context) => const SimpleDrawingTest(),
+      //                     ),
+      //                   );
+      //                 },
+      //                 child: const Text('绘图测试'),
+      //               ),
+      //             ),
+      //           ],
+      //         ),
+      //       ),
+      //       // 默认显示完整示例
+      //       const Expanded(
+      //         child: EnhancedKChartExample(),
+      //       ),
+      //     ],
+      //   ),
+      // ),
       body: SafeArea(
         child: KChartView(
           height: double.infinity,

@@ -23,7 +23,7 @@ class KChartView extends StatefulWidget {
     this.isFull = false,
     this.isSimple = false,
     this.isTradeView = false,
-    this.enableDrawingTools = false,
+    this.enableDrawingTools = true,
     this.isDarkTheme = false,
   });
 
@@ -58,6 +58,7 @@ class _KChartViewState extends State<KChartView> {
   DrawingToolManager? _drawingToolManager;
   bool _isDrawingMode = false;
   DrawingToolType? _currentDrawingTool;
+  bool _isDrawingVisible = true; // 绘图内容可见性控制
 
   final List<String> mainIntervals = ['15m', '1h', '4h', '1d'];
   final List<String> allIntervals = ['1h'];
@@ -70,19 +71,31 @@ class _KChartViewState extends State<KChartView> {
       volHidden = true;
     }
 
+    // 优化：绘图工具初始化
     if (widget.enableDrawingTools == true) {
       _drawingToolManager = DrawingToolManager();
+
+      // 设置绘图工具变化回调
       _drawingToolManager!.onToolsChanged = () {
         if (mounted) setState(() {});
       };
+
+      // 设置工具选中回调
       _drawingToolManager!.onToolSelected = (tool) {
         if (mounted) {
           setState(() {
             // 工具选中时的状态更新
+            debugPrint('选中绘图工具: ${tool?.displayName ?? "无"}');
           });
         }
       };
-      // _drawingToolManager!.addTestTools();
+
+      // 初始化绘图模式 - 默认关闭，用户手动开启
+      _drawingToolManager!.modeManager.setDrawingMode(false);
+      _isDrawingMode = false;
+      _currentDrawingTool = null;
+
+      debugPrint('绘图工具管理器初始化完成');
     }
 
     fetchKline(false);
@@ -314,38 +327,93 @@ class _KChartViewState extends State<KChartView> {
   }
 
   void _toggleDrawingTool(DrawingToolType? toolType) {
+    if (_drawingToolManager == null) return;
+
     setState(() {
-      if (_currentDrawingTool == toolType) {
+      if (_currentDrawingTool == toolType && toolType != null) {
         // 如果点击的是当前工具，则取消绘图模式
         _currentDrawingTool = null;
         _isDrawingMode = false;
-        _drawingToolManager?.setCurrentToolType(null);
+        _drawingToolManager!.setCurrentToolType(null);
+        _drawingToolManager!.modeManager.setDrawingMode(false);
+        debugPrint('取消绘图工具: $toolType');
       } else {
         // 切换到新的绘图工具
         _currentDrawingTool = toolType;
         _isDrawingMode = toolType != null;
-        _drawingToolManager?.setCurrentToolType(toolType);
+        _drawingToolManager!.setCurrentToolType(toolType);
+        _drawingToolManager!.modeManager.setDrawingMode(toolType != null);
+        debugPrint('选择绘图工具: $toolType');
+      }
+
+      // 同步当前工具状态
+      if (toolType != null) {
+        debugPrint('绘图模式: $_isDrawingMode, 当前工具: $_currentDrawingTool');
       }
     });
   }
 
   void _clearAllDrawings() {
-    _drawingToolManager?.clearAllTools();
+    if (_drawingToolManager == null) return;
+    _drawingToolManager!.clearAllTools();
+    debugPrint('清除所有绘图工具');
     setState(() {}); // 强制刷新UI
   }
 
   void _deleteSelectedDrawing() {
-    _drawingToolManager?.deleteSelectedTool();
+    if (_drawingToolManager == null) return;
+    _drawingToolManager!.deleteSelectedTool();
+    debugPrint('删除选中的绘图工具');
     setState(() {}); // 强制刷新UI
   }
 
   void _toggleDrawingMode() {
+    if (_drawingToolManager == null) return;
+
     setState(() {
       _isDrawingMode = !_isDrawingMode;
+      _drawingToolManager!.modeManager.setDrawingMode(_isDrawingMode);
+
       if (!_isDrawingMode) {
+        // 关闭绘图模式时，清除当前工具
         _currentDrawingTool = null;
-        _drawingToolManager?.setCurrentToolType(null);
+        _drawingToolManager!.setCurrentToolType(null);
+        debugPrint('关闭绘图模式');
+      } else {
+        debugPrint('开启绘图模式');
       }
+    });
+  }
+
+  void _toggleContinuousMode() {
+    if (_drawingToolManager == null) return;
+
+    setState(() {
+      _drawingToolManager!.modeManager.toggleContinuousMode();
+      debugPrint(
+          '连续绘图模式: ${_drawingToolManager!.modeManager.isContinuousMode}');
+    });
+  }
+
+  void _toggleMagnetMode() {
+    if (_drawingToolManager == null) return;
+
+    setState(() {
+      _drawingToolManager!.modeManager.toggleMagnetMode();
+      debugPrint('磁铁吸附模式: ${_drawingToolManager!.modeManager.isMagnetMode}');
+    });
+  }
+
+  void _toggleDrawingVisibility() {
+    if (_drawingToolManager == null) return;
+
+    setState(() {
+      _isDrawingVisible = !_isDrawingVisible;
+      // 切换所有绘图工具的可见性
+      for (var tool in _drawingToolManager!.tools) {
+        tool.isVisible = _isDrawingVisible;
+      }
+      debugPrint('绘图可见性: $_isDrawingVisible');
     });
   }
 
@@ -355,93 +423,190 @@ class _KChartViewState extends State<KChartView> {
     }
 
     return Container(
-      height: 48.h,
-      padding: EdgeInsets.symmetric(horizontal: 8.w),
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
           top: BorderSide(color: Colors.grey[300]!, width: 0.5),
+          bottom: BorderSide(color: Colors.grey[300]!, width: 0.5),
         ),
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            // 8个主工具按钮
-            _buildDrawingToolButton(
-              icon: Icons.show_chart, // 趋势线
-              toolType: DrawingToolType.trendLine,
-              tooltip: '趋势线',
+      child: Column(
+        children: [
+          // 模式控制区域
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(6.r),
             ),
-            _buildDrawingToolButton(
-              icon: Icons.architecture, // 趋势角度（占位）
-              toolType: DrawingToolType.trendAngle,
-              tooltip: '趋势角度',
+            child: Row(
+              children: [
+                if (_isDrawingMode) ...[
+                  // 连续绘图模式
+                  _buildModeToggle(
+                    icon: Icons.repeat,
+                    label: '连续',
+                    isActive: _drawingToolManager!.modeManager.isContinuousMode,
+                    onTap: _toggleContinuousMode,
+                  ),
+                  SizedBox(width: 12.w),
+                  // 磁铁吸附模式
+                  _buildModeToggle(
+                    icon: Icons.auto_fix_high,
+                    label: '磁铁',
+                    isActive: _drawingToolManager!.modeManager.isMagnetMode,
+                    onTap: _toggleMagnetMode,
+                  ),
+                  SizedBox(width: 12.w),
+                  _buildModeToggle(
+                    icon: _isDrawingVisible
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                    label: _isDrawingVisible ? '显示' : '隐藏',
+                    isActive: _isDrawingVisible,
+                    onTap: _toggleDrawingVisibility,
+                  ),
+                  SizedBox(width: 12.w),
+                  _buildModeToggle(
+                    icon: Icons.delete_outline,
+                    label: '清除',
+                    isActive: false, // 清除按钮不需要激活状态
+                    onTap: _clearAllDrawings,
+                  ),
+                  SizedBox(width: 12.w),
+                  _buildModeToggle(
+                    icon: Icons.close,
+                    label: '退出',
+                    isActive: false,
+                    onTap: () => _toggleDrawingMode(),
+                  ),
+                ],
+
+                const Spacer(),
+
+                // // 工具数量和状态指示
+                // Container(
+                //   padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                //   decoration: BoxDecoration(
+                //     color: _drawingToolManager!.tools.isNotEmpty
+                //         ? Colors.green[100]
+                //         : Colors.grey[200],
+                //     borderRadius: BorderRadius.circular(4.r),
+                //   ),
+                //   child: Text(
+                //     '${_drawingToolManager!.tools.length}个工具',
+                //     style: TextStyle(
+                //       fontSize: 10.sp,
+                //       color: _drawingToolManager!.tools.isNotEmpty
+                //           ? Colors.green[700]
+                //           : Colors.grey[600],
+                //     ),
+                //   ),
+                // ),
+              ],
             ),
-            _buildDrawingToolButton(
-              icon: Icons.arrow_right_alt, // 箭头
-              toolType: DrawingToolType.arrow,
-              tooltip: '箭头',
+          ),
+
+          if (_isDrawingMode) ...[
+            SizedBox(height: 8.h),
+            // 绘图工具按钮区域
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  // 8个主工具按钮
+                  _buildDrawingToolButton(
+                    icon: Icons.show_chart,
+                    toolType: DrawingToolType.trendLine,
+                    tooltip: '趋势线',
+                  ),
+                  _buildDrawingToolButton(
+                    icon: Icons.architecture,
+                    toolType: DrawingToolType.trendAngle,
+                    tooltip: '趋势角度',
+                  ),
+                  _buildDrawingToolButton(
+                    icon: Icons.arrow_right_alt,
+                    toolType: DrawingToolType.arrow,
+                    tooltip: '箭头',
+                  ),
+                  _buildDrawingToolButton(
+                    icon: Icons.vertical_align_center,
+                    toolType: DrawingToolType.verticalLine,
+                    tooltip: '垂直线',
+                  ),
+                  _buildDrawingToolButton(
+                    icon: Icons.horizontal_rule,
+                    toolType: DrawingToolType.horizontalLine,
+                    tooltip: '水平线',
+                  ),
+                  _buildDrawingToolButton(
+                    icon: Icons.trending_flat,
+                    toolType: DrawingToolType.horizontalRay,
+                    tooltip: '水平射线',
+                  ),
+                  _buildDrawingToolButton(
+                    icon: Icons.timeline,
+                    toolType: DrawingToolType.ray,
+                    tooltip: '射线',
+                  ),
+                  _buildDrawingToolButton(
+                    icon: Icons.add,
+                    toolType: DrawingToolType.crossLine,
+                    tooltip: '十字线',
+                  ),
+
+                  // // 分隔线
+                  // Container(
+                  //   width: 1,
+                  //   height: 24.h,
+                  //   margin: EdgeInsets.symmetric(horizontal: 8.w),
+                  //   color: Colors.grey[300],
+                  // ),
+
+                  // // 功能按钮
+                  // _buildActionButton(
+                  //   icon: Icons.clear,
+                  //   tooltip: '取消工具',
+                  //   onPressed: () => _toggleDrawingTool(null),
+                  //   color: Colors.orange,
+                  // ),
+                  // _buildActionButton(
+                  //   icon: Icons.delete_outline,
+                  //   tooltip: '删除选中',
+                  //   onPressed: _deleteSelectedDrawing,
+                  //   color: Colors.red,
+                  // ),
+                  // _buildActionButton(
+                  //   icon: Icons.clear_all,
+                  //   tooltip: '清除所有',
+                  //   onPressed: _clearAllDrawings,
+                  //   color: Colors.red,
+                  //   isDestructive: true,
+                  // ),
+                ],
+              ),
             ),
-            _buildDrawingToolButton(
-              icon: Icons.vertical_align_center, // 垂直线
-              toolType: DrawingToolType.verticalLine,
-              tooltip: '垂直线',
-            ),
-            _buildDrawingToolButton(
-              icon: Icons.horizontal_rule, // 水平线
-              toolType: DrawingToolType.horizontalLine,
-              tooltip: '水平线',
-            ),
-            _buildDrawingToolButton(
-              icon: Icons.trending_flat, // 水平射线（占位）
-              toolType: DrawingToolType.horizontalRay,
-              tooltip: '水平射线',
-            ),
-            _buildDrawingToolButton(
-              icon: Icons.trending_flat, // 射线（占位）
-              toolType: DrawingToolType.ray,
-              tooltip: '射线',
-            ),
-            _buildDrawingToolButton(
-              icon: Icons.add, // 十字线
-              toolType: DrawingToolType.crossLine,
-              tooltip: '十字线',
-            ),
-            // 分隔线
-            Container(
-              width: 1,
-              height: 24.h,
-              margin: EdgeInsets.symmetric(horizontal: 8.w),
-              color: Colors.grey[300],
-            ),
-            // 右侧功能按钮（吸附、可见性、删除、清空）
-            IconButton(
-              onPressed: () {
-                // TODO: 吸附功能
-              },
-              icon: Icon(Icons.auto_fix_high, size: 20.sp),
-              tooltip: '吸附',
-            ),
-            IconButton(
-              onPressed: () {
-                // TODO: 可见性切换
-              },
-              icon: Icon(Icons.visibility, size: 20.sp),
-              tooltip: '可见性',
-            ),
-            IconButton(
-              onPressed: _deleteSelectedDrawing,
-              icon: Icon(Icons.delete_outline, size: 20.sp),
-              tooltip: '删除选中',
-            ),
-            IconButton(
-              onPressed: _clearAllDrawings,
-              icon: Icon(Icons.clear_all, size: 20.sp),
-              tooltip: '清除所有',
-            ),
+
+            // 使用说明
+            if (_currentDrawingTool != null) ...[
+              SizedBox(height: 4.h),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                child: Text(
+                  _getToolInstructions(_currentDrawingTool!),
+                  style: TextStyle(
+                    fontSize: 10.sp,
+                    color: Colors.grey[600],
+                    fontStyle: FontStyle.italic,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
           ],
-        ),
+        ],
       ),
     );
   }
@@ -453,21 +618,132 @@ class _KChartViewState extends State<KChartView> {
   }) {
     final isSelected = _currentDrawingTool == toolType;
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 2.w),
-      child: IconButton(
-        onPressed: () => _toggleDrawingTool(toolType),
-        icon: Icon(icon, size: 20.sp),
-        tooltip: tooltip,
-        style: IconButton.styleFrom(
-          backgroundColor: isSelected ? Colors.blue[100] : Colors.transparent,
-          foregroundColor: isSelected ? Colors.blue[700] : Colors.grey[600],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(6.r),
-          ),
+    return IconButton(
+      onPressed: () => _toggleDrawingTool(toolType),
+      icon: Icon(icon, size: 16.sp),
+      tooltip: tooltip,
+      style: IconButton.styleFrom(
+        backgroundColor: isSelected ? Colors.blue[100] : Colors.transparent,
+        foregroundColor: isSelected ? Colors.blue[700] : Colors.grey[600],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6.r),
         ),
       ),
     );
+  }
+
+  Widget _buildModeToggle({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.blue[100] : Colors.transparent,
+          borderRadius: BorderRadius.circular(4.r),
+          border: Border.all(
+            color: isActive ? Colors.blue[300]! : Colors.grey[300]!,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14.sp,
+              color: isActive ? Colors.blue[700] : Colors.grey[600],
+            ),
+            SizedBox(width: 4.w),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.sp,
+                color: isActive ? Colors.blue[700] : Colors.grey[600],
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+    required Color color,
+    bool isDestructive = false,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 2.w),
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18.sp),
+        tooltip: tooltip,
+        style: IconButton.styleFrom(
+          backgroundColor:
+              isDestructive ? color.withOpacity(0.1) : Colors.transparent,
+          foregroundColor: color,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6.r),
+          ),
+          padding: EdgeInsets.all(8.w),
+          minimumSize: Size(36.w, 36.h),
+        ),
+      ),
+    );
+  }
+
+  String _getToolDisplayName(DrawingToolType toolType) {
+    switch (toolType) {
+      case DrawingToolType.trendLine:
+        return '趋势线';
+      case DrawingToolType.trendAngle:
+        return '趋势角度';
+      case DrawingToolType.arrow:
+        return '箭头';
+      case DrawingToolType.verticalLine:
+        return '垂直线';
+      case DrawingToolType.horizontalLine:
+        return '水平线';
+      case DrawingToolType.horizontalRay:
+        return '水平射线';
+      case DrawingToolType.ray:
+        return '射线';
+      case DrawingToolType.crossLine:
+        return '十字线';
+      default:
+        return '未知工具';
+    }
+  }
+
+  String _getToolInstructions(DrawingToolType toolType) {
+    switch (toolType) {
+      case DrawingToolType.trendLine:
+        return '点击并拖动以绘制趋势线。';
+      case DrawingToolType.trendAngle:
+        return '点击并拖动以绘制趋势角度。';
+      case DrawingToolType.arrow:
+        return '点击并拖动以绘制箭头。';
+      case DrawingToolType.verticalLine:
+        return '点击并拖动以绘制垂直线。';
+      case DrawingToolType.horizontalLine:
+        return '点击并拖动以绘制水平线。';
+      case DrawingToolType.horizontalRay:
+        return '点击选择位置绘制水平射线（从右往左）。';
+      case DrawingToolType.ray:
+        return '点击并拖动以绘制射线。';
+      case DrawingToolType.crossLine:
+        return '点击并拖动以绘制十字线。';
+      default:
+        return '请选择一个绘图工具。';
+    }
   }
 
   @override
@@ -561,6 +837,28 @@ class _KChartViewState extends State<KChartView> {
                           ),
                         ),
                       ),
+
+                      // 当前工具指示器
+                      if (_isDrawingMode && _currentDrawingTool != null) ...[
+                        SizedBox(width: 8.w),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 6.w, vertical: 2.h),
+                          decoration: BoxDecoration(
+                            color: Colors.green[100],
+                            borderRadius: BorderRadius.circular(3.r),
+                          ),
+                          child: Text(
+                            _getToolDisplayName(_currentDrawingTool!),
+                            style: TextStyle(
+                              color: Colors.green[700],
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+
                       SizedBox(width: 12.w),
                     ],
                     if (widget.isFull == false && widget.isSimple == false) ...[
@@ -606,6 +904,11 @@ class _KChartViewState extends State<KChartView> {
                         enableDrawingTools: widget.enableDrawingTools ?? false,
                         drawingToolManager: _drawingToolManager,
                         enableTheme: true,
+                        onCrossLineTap: (double price) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('点击了十字线标签，当前位置价格: $price')),
+                          );
+                        },
                       ),
               ),
             ),

@@ -12,6 +12,7 @@ import 'base_chart_renderer.dart';
 import 'main_renderer.dart';
 import 'secondary_renderer.dart';
 import 'vol_renderer.dart';
+import 'dart:math' as math;
 
 class TrendLine {
   final Offset p1;
@@ -54,6 +55,9 @@ class ChartPainter extends BaseChartPainter {
   final bool showNowPrice;
   final VerticalTextAlignment verticalTextAlignment;
 
+  // 新增：是否显示十字线
+  final bool shouldShowCrossLine;
+
   ChartPainter(
     this.chartStyle,
     this.chartColors, {
@@ -79,19 +83,25 @@ class ChartPainter extends BaseChartPainter {
     this.showNowPrice = true,
     this.fixedLength = 2,
     this.maDayList = const [5, 10, 20],
-  }) : super(chartStyle,
-            datas: datas,
-            scaleX: scaleX,
-            scrollX: scrollX,
-            isLongPress: isLongPass,
-            isOnTap: isOnTap,
-            isTapShowInfoDialog: isTapShowInfoDialog,
-            selectX: selectX,
-            mainState: mainState,
-            volHidden: volHidden,
-            secondaryState: secondaryState,
-            xFrontPadding: xFrontPadding,
-            isLine: isLine) {
+    this.shouldShowCrossLine = false, // 新增：是否显示十字线
+    Function(double)? onCrossLineTap, // 新增：十字线点击回调
+  }) : super(
+          chartStyle,
+          datas: datas,
+          scaleX: scaleX,
+          scrollX: scrollX,
+          isLongPress: isLongPass,
+          isOnTap: isOnTap,
+          isTapShowInfoDialog: isTapShowInfoDialog,
+          selectX: selectX,
+          mainState: mainState,
+          volHidden: volHidden,
+          secondaryState: secondaryState,
+          xFrontPadding: xFrontPadding,
+          isLine: isLine,
+          shouldShowCrossLine: shouldShowCrossLine, // 传递十字线显示状态
+          onCrossLineTap: onCrossLineTap, // 传递十字线点击回调
+        ) {
     selectPointPaint = Paint()
       ..isAntiAlias = true
       ..strokeWidth = 0.5
@@ -203,29 +213,22 @@ class ChartPainter extends BaseChartPainter {
           lastPoint, curPoint, lastX, curX, size, canvas);
     }
 
-    if ((isLongPress == true || (isTapShowInfoDialog && isOnTap)) &&
-        isTrendLine == false) {
-      drawCrossLine(canvas, size);
-    }
+    // 移除了十字线绘制，现在由base_chart_painter负责
     if (isTrendLine == true) drawTrendLines(canvas, size);
     canvas.restore();
 
     // 在恢复canvas状态后绘制绘图工具，避免受到缩放和平移影响
     if (drawingToolManager != null) {
-      // 创建正确的坐标转换函数
-      double getXForDrawing(double x) {
-        // x 应该是屏幕坐标，直接返回
-        return x;
-      }
-
-      double getYForDrawing(double y) {
-        // y 是屏幕坐标，直接返回
-        return y;
-      }
-
       debugPrint('ChartPainter.drawChart: 开始绘制绘图工具');
-      drawingToolManager!
-          .drawTools(canvas, size, 1.0, 0.0, getXForDrawing, getYForDrawing);
+      // 直接绘制，因为绘图工具存储的已经是屏幕坐标
+      drawingToolManager!.drawTools(
+        canvas,
+        size,
+        1.0, // scaleX = 1.0，因为不需要额外缩放
+        0.0, // scrollX = 0.0，因为不需要额外偏移
+        (index) => index, // getX: 直接返回输入值（屏幕坐标）
+        (price) => price, // getY: 直接返回输入值（屏幕坐标）
+      );
     }
   }
 
@@ -279,70 +282,126 @@ class ChartPainter extends BaseChartPainter {
 
   @override
   void drawCrossLineText(Canvas canvas, Size size) {
+    // 使用手指位置
+    double x = selectX;
+    double y = selectY;
+
+    // 确保Y坐标在主图区域内
+    if (y < mTopPadding) y = mTopPadding;
+    if (y > mMainRect.bottom) y = mMainRect.bottom;
+
+    // 根据Y坐标计算对应的价格
+    double currentPrice = mMainRenderer.getYFromPrice(y);
+
+    // 获取最新价格（最后一个数据点的收盘价）
+    double latestPrice = 0;
+    if (datas != null && datas!.isNotEmpty) {
+      latestPrice = datas!.last.close;
+    }
+
+    // 计算涨跌幅
+    double changeAmount = currentPrice - latestPrice;
+    double changePercent =
+        latestPrice != 0 ? (changeAmount / latestPrice) * 100 : 0;
+
+    // 创建价格文本（简化显示）
+    String priceText = currentPrice.toStringAsFixed(fixedLength);
+    String changeText =
+        "${changePercent >= 0 ? '+' : ''}${changePercent.toStringAsFixed(2)}%";
+
+    // 使用默认文本颜色
+    Color textColor = chartColors.defaultTextColor;
+
+    // 绘制价格文本
+    TextPainter priceTp = getTextPainter(priceText, textColor);
+    TextPainter changeTp = getTextPainter(changeText, textColor);
+
+    double textHeight = priceTp.height;
+    double priceWidth = priceTp.width;
+    double changeWidth = changeTp.width;
+    double maxWidth = math.max(priceWidth, changeWidth);
+
+    double w1 = 8;
+    double w2 = 6;
+    double lineSpacing = 2; // 行间距
+    double totalTextHeight = textHeight * 2 + lineSpacing; // 两行文本总高度
+    double r = totalTextHeight / 2 + w2; // 背景框半高
+
+    // 计算文本垂直居中位置
+    double topMargin = (totalTextHeight - textHeight * 2 - lineSpacing) / 2;
+    double priceY = y - totalTextHeight / 2 + topMargin; // 价格文本Y位置（顶对齐到背景框内）
+    double changeY = priceY + textHeight + lineSpacing; // 涨跌幅文本Y位置
+
+    double textX;
+    bool isLeft = false;
+
+    // 判断标签应该显示在左侧还是右侧
+    if (x < mWidth / 2) {
+      isLeft = false;
+      textX = 1;
+
+      // 绘制统一背景
+      Path path = Path();
+      path.moveTo(textX, y - r);
+      path.lineTo(textX, y + r);
+      path.lineTo(maxWidth + 2 * w1, y + r);
+      path.lineTo(maxWidth + 2 * w1 + w2, y);
+      path.lineTo(maxWidth + 2 * w1, y - r);
+      path.close();
+      canvas.drawPath(path, selectPointPaint);
+      canvas.drawPath(path, selectorBorderPaint);
+
+      // 绘制文本
+      priceTp.paint(canvas, Offset(textX + w1, priceY));
+      changeTp.paint(canvas, Offset(textX + w1, changeY));
+    } else {
+      isLeft = true;
+      textX = mWidth - maxWidth - 1 - 2 * w1 - w2;
+
+      // 绘制统一背景
+      Path path = Path();
+      path.moveTo(textX, y);
+      path.lineTo(textX + w2, y + r);
+      path.lineTo(mWidth - 2, y + r);
+      path.lineTo(mWidth - 2, y - r);
+      path.lineTo(textX + w2, y - r);
+      path.close();
+      canvas.drawPath(path, selectPointPaint);
+      canvas.drawPath(path, selectorBorderPaint);
+
+      // 绘制文本
+      priceTp.paint(canvas, Offset(textX + w1 + w2, priceY));
+      changeTp.paint(canvas, Offset(textX + w1 + w2, changeY));
+    }
+
+    // 绘制底部时间标签（仍然基于最近的数据点）
     var index = calculateSelectedX(selectX);
     KLineEntity point = getItem(index);
 
-    TextPainter tp = getTextPainter(point.close, chartColors.crossTextColor);
-    double textHeight = tp.height;
-    double textWidth = tp.width;
-
-    double w1 = 5;
-    double w2 = 3;
-    double r = textHeight / 2 + w2;
-    double y = getMainY(point.close);
-    double x;
-    bool isLeft = false;
-    if (translateXtoX(getX(index)) < mWidth / 2) {
-      isLeft = false;
-      x = 1;
-      Path path = new Path();
-      path.moveTo(x, y - r);
-      path.lineTo(x, y + r);
-      path.lineTo(textWidth + 2 * w1, y + r);
-      path.lineTo(textWidth + 2 * w1 + w2, y);
-      path.lineTo(textWidth + 2 * w1, y - r);
-      path.close();
-      canvas.drawPath(path, selectPointPaint);
-      canvas.drawPath(path, selectorBorderPaint);
-      tp.paint(canvas, Offset(x + w1, y - textHeight / 2));
-    } else {
-      isLeft = true;
-      x = mWidth - textWidth - 1 - 2 * w1 - w2;
-      Path path = new Path();
-      path.moveTo(x, y);
-      path.lineTo(x + w2, y + r);
-      path.lineTo(mWidth - 2, y + r);
-      path.lineTo(mWidth - 2, y - r);
-      path.lineTo(x + w2, y - r);
-      path.close();
-      canvas.drawPath(path, selectPointPaint);
-      canvas.drawPath(path, selectorBorderPaint);
-      tp.paint(canvas, Offset(x + w1 + w2, y - textHeight / 2));
-    }
-
     TextPainter dateTp =
         getTextPainter(getDate(point.time), chartColors.crossTextColor);
-    textWidth = dateTp.width;
-    r = textHeight / 2;
-    x = translateXtoX(getX(index));
-    y = size.height - mBottomPadding;
+    double dateWidth = dateTp.width;
+    double dateX = x;
+    double dateY = size.height - mBottomPadding;
 
-    if (x < textWidth + 2 * w1) {
-      x = 1 + textWidth / 2 + w1;
-    } else if (mWidth - x < textWidth + 2 * w1) {
-      x = mWidth - 1 - textWidth / 2 - w1;
+    if (dateX < dateWidth + 2 * w1) {
+      dateX = 1 + dateWidth / 2 + w1;
+    } else if (mWidth - dateX < dateWidth + 2 * w1) {
+      dateX = mWidth - 1 - dateWidth / 2 - w1;
     }
+
     double baseLine = textHeight / 2;
     canvas.drawRect(
-        Rect.fromLTRB(x - textWidth / 2 - w1, y, x + textWidth / 2 + w1,
-            y + baseLine + r),
+        Rect.fromLTRB(dateX - dateWidth / 2 - w1, dateY,
+            dateX + dateWidth / 2 + w1, dateY + baseLine + r / 2),
         selectPointPaint);
     canvas.drawRect(
-        Rect.fromLTRB(x - textWidth / 2 - w1, y, x + textWidth / 2 + w1,
-            y + baseLine + r),
+        Rect.fromLTRB(dateX - dateWidth / 2 - w1, dateY,
+            dateX + dateWidth / 2 + w1, dateY + baseLine + r / 2),
         selectorBorderPaint);
 
-    dateTp.paint(canvas, Offset(x - textWidth / 2, y));
+    dateTp.paint(canvas, Offset(dateX - dateWidth / 2, dateY));
+
     //长按显示这条数据详情
     sink?.add(InfoWindowEntity(point, isLeft: isLeft));
   }
@@ -574,21 +633,23 @@ class ChartPainter extends BaseChartPainter {
 
   ///画交叉线
   void drawCrossLine(Canvas canvas, Size size) {
-    var index = calculateSelectedX(selectX);
-    KLineEntity point = getItem(index);
+    // 使用手指位置而不是数据点位置
+    double x = selectX;
+    double y = selectY;
 
-    // 创建虚线画笔 - 竖线使用与横线相同的颜色
+    // 确保十字线在图表区域内
+    if (y < mTopPadding) y = mTopPadding;
+    if (y > size.height - mBottomPadding) y = size.height - mBottomPadding;
+
+    // 创建虚线画笔 - 竖线
     Paint paintY = Paint()
-      ..color = this.chartColors.hCrossColor // 使用与横线相同的颜色
-      ..strokeWidth = this.chartStyle.hCrossWidth // 使用与横线相同的宽度
+      ..color = this.chartColors.hCrossColor // 使用横线相同的颜色确保可见性
+      ..strokeWidth = this.chartStyle.hCrossWidth // 使用合适的宽度，而不是过宽的vCrossWidth
       ..isAntiAlias = true
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    double x = getX(index);
-    double y = getMainY(point.close);
-
-    // k线图竖线 - 使用虚线
+    // 绘制竖线（纵向线） - 使用虚线
     _drawDashedLine(
       canvas,
       Offset(x, mTopPadding),
@@ -596,32 +657,31 @@ class ChartPainter extends BaseChartPainter {
       paintY,
     );
 
+    // 创建虚线画笔 - 横线
     Paint paintX = Paint()
-      ..color = this.chartColors.hCrossColor
-      ..strokeWidth = this.chartStyle.hCrossWidth
+      ..color = this.chartColors.hCrossColor // 使用横线颜色
+      ..strokeWidth = this.chartStyle.hCrossWidth // 使用横线宽度
       ..isAntiAlias = true
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    // k线图横线 - 使用虚线
+    // 绘制横线 - 使用虚线（只在主图区域绘制）
     _drawDashedLine(
       canvas,
-      Offset(-mTranslateX, y),
-      Offset(-mTranslateX + mWidth / scaleX, y),
+      Offset(0, y),
+      Offset(size.width, y),
       paintX,
     );
 
-    if (scaleX >= 1) {
-      canvas.drawOval(
-          Rect.fromCenter(
-              center: Offset(x, y), height: 2.0 * scaleX, width: 2.0),
-          paintX);
-    } else {
-      canvas.drawOval(
-          Rect.fromCenter(
-              center: Offset(x, y), height: 2.0, width: 2.0 / scaleX),
-          paintX);
-    }
+    // 绘制中心点 - 简化设计，只要内圈实心圆圈
+    canvas.drawCircle(
+      Offset(x, y),
+      2.0, // 半径2.0
+      Paint()
+        ..color = this.chartColors.hCrossColor
+        ..style = PaintingStyle.fill
+        ..isAntiAlias = true,
+    );
   }
 
   /// 绘制虚线
@@ -676,5 +736,55 @@ class ChartPainter extends BaseChartPainter {
   /// 点是否在MainRect中
   bool isInMainRect(Offset point) {
     return mMainRect.contains(point);
+  }
+
+  /// 检测是否点击了十字线标签
+  bool isCrossLineLabelTapped(Offset tapPoint) {
+    if (!shouldShowCrossLine) return false;
+
+    double x = selectX;
+    double y = selectY;
+
+    // 确保Y坐标在主图区域内
+    if (y < mTopPadding) y = mTopPadding;
+    if (y > mMainRect.bottom) y = mMainRect.bottom;
+
+    // 计算标签位置和大小
+    double w1 = 8;
+    double w2 = 6;
+    double lineSpacing = 2;
+    double textHeight = 12; // 估算文本高度
+    double totalTextHeight = textHeight * 2 + lineSpacing;
+    double r = totalTextHeight / 2 + w2;
+    double maxWidth = 100; // 估算最大宽度
+
+    Rect labelRect;
+    if (x < mWidth / 2) {
+      // 左侧标签
+      labelRect = Rect.fromLTRB(
+        1,
+        y - r,
+        maxWidth + 2 * w1 + w2,
+        y + r,
+      );
+    } else {
+      // 右侧标签
+      labelRect = Rect.fromLTRB(
+        mWidth - maxWidth - 1 - 2 * w1 - w2,
+        y - r,
+        mWidth - 2,
+        y + r,
+      );
+    }
+
+    return labelRect.contains(tapPoint);
+  }
+
+  /// 获取当前十字线位置的价格
+  double getCurrentCrossLinePrice() {
+    double y = selectY;
+    if (y < mTopPadding) y = mTopPadding;
+    if (y > mMainRect.bottom) y = mMainRect.bottom;
+    return mMainRenderer.getYFromPrice(y);
   }
 }
