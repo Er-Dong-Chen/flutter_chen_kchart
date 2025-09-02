@@ -114,12 +114,13 @@ class KChartWidget extends StatefulWidget {
   final bool isLine;
   final bool isTapShowInfoDialog; //是否开启单击显示详情数据
   final bool hideGrid;
+  @Deprecated('Use `translations` instead.')
   final bool isChinese;
   final bool showNowPrice;
   final bool showInfoDialog;
   final bool materialInfoDialog; // Material风格的信息弹窗
   final Map<String, ChartTranslations> translations;
-  final List<String> timeFormat;
+  final List<String>? timeFormat;
 
   //当屏幕滚动到尽头会调用，真为拉到屏幕右侧尽头，假为拉到屏幕左侧尽头
   final Function(bool)? onLoadMore;
@@ -184,12 +185,12 @@ class KChartWidget extends StatefulWidget {
     this.isLine = false,
     this.isTapShowInfoDialog = false,
     this.hideGrid = false,
-    this.isChinese = false,
+    @Deprecated('Use `translations` instead.') this.isChinese = false,
     this.showNowPrice = true,
     this.showInfoDialog = true,
     this.materialInfoDialog = true,
     this.translations = kChartTranslations,
-    this.timeFormat = TimeFormat.YEAR_MONTH_DAY,
+    this.timeFormat,
     this.onLoadMore,
     this.fixedLength = 2,
     this.maDayList = const [5, 10, 20],
@@ -278,21 +279,6 @@ class _KChartWidgetState extends State<KChartWidget>
   // 新增：图表绘制器实例
   ChartPainter? _painter;
 
-  // 新增：拖拽状态跟踪
-  Offset? _lastFocalPoint; // 上次触摸焦点位置
-
-  // 新增：绘图工具移动跟踪
-  Offset? _drawingStartPosition; // 绘图开始位置
-  bool _isDrawingToolMoving = false; // 是否正在移动绘图工具
-  static const double _movementThreshold = 5.0; // 移动阈值
-  Timer? _movementResetTimer; // 移动状态重置定时器
-
-  // 新增：绘图工具十字线选择模式
-  bool _isDrawingCrosshairMode = false; // 是否处于绘图十字线选择模式
-  bool _isSelectingStartPoint = false; // 是否正在选择起点
-  bool _isSelectingEndPoint = false; // 是否正在选择终点
-  Offset? _drawingCrosshairPosition; // 绘图十字线位置
-
   // 获取当前主题的颜色和样式
   ChartColors get currentChartColors {
     if (widget.enableTheme) {
@@ -312,8 +298,7 @@ class _KChartWidgetState extends State<KChartWidget>
   // 获取当前绘图模式状态
   bool get _isDrawingMode {
     if (!widget.enableDrawingTools) return false;
-    return _drawingToolManager.modeManager.isDrawingModeEnabled &&
-        _drawingToolManager.currentToolType != null;
+    return _drawingToolManager.currentToolType != null;
   }
 
   @override
@@ -363,20 +348,8 @@ class _KChartWidgetState extends State<KChartWidget>
     _boundaryFeedbackTimer?.cancel();
     _updateThrottleTimer?.cancel(); // 清理节流定时器
     _crossLineHideTimer?.cancel(); // 清理十字线隐藏定时器
-    _movementResetTimer?.cancel(); // 清理移动状态重置定时器
 
     super.dispose();
-  }
-
-  // 新增：重置绘图移动状态
-  void _resetDrawingMovementState() {
-    _movementResetTimer?.cancel();
-    _movementResetTimer = Timer(Duration(milliseconds: 500), () {
-      if (mounted) {
-        _isDrawingToolMoving = false;
-        debugPrint('自动重置绘图移动状态');
-      }
-    });
   }
 
   // 程序化缩放方法
@@ -642,314 +615,6 @@ class _KChartWidgetState extends State<KChartWidget>
     _triggerHapticFeedback('light'); // 使用轻微震动，提供即时反馈
   }
 
-  // 新增：绘图工具点击事件处理
-  void _handleDrawingToolTap(Offset localPosition) {
-    debugPrint(
-        '_handleDrawingToolTap: position=$localPosition, currentToolType=${_drawingToolManager.currentToolType}, drawingModeEnabled=${_drawingToolManager.modeManager.isDrawingModeEnabled}');
-
-    if (_drawingToolManager.currentToolType == null) {
-      // 如果没有选择工具，则选择已有的绘图工具
-      _drawingToolManager.selectTool(localPosition);
-      return;
-    }
-
-    final toolType = _drawingToolManager.currentToolType!;
-
-    // 检查是否处于十字线选择模式
-    if (_isDrawingCrosshairMode) {
-      if (_isSelectingStartPoint) {
-        // 确认起点位置
-        _confirmStartPoint(localPosition, toolType);
-      } else if (_isSelectingEndPoint) {
-        // 确认终点位置
-        _confirmEndPoint(localPosition, toolType);
-      } else {
-        // 单点工具确认位置
-        _confirmSinglePoint(localPosition, toolType);
-      }
-      return;
-    }
-
-    // 修复：强制设置十字线位置为点击位置，覆盖可能的错误跟踪
-    debugPrint('强制设置十字线位置为点击位置: $localPosition');
-
-    // 使用统一的位置更新方法，会自动处理边界限制
-    _updateDrawingCrosshairPosition(localPosition, '_handleDrawingToolTap');
-
-    _startDrawingToolSelection(toolType);
-  }
-
-  // 开始绘图工具选择流程
-  void _startDrawingToolSelection(DrawingToolType toolType) {
-    debugPrint('开始绘图工具选择流程: $toolType');
-
-    _isDrawingCrosshairMode = true;
-
-    // 修复：确保十字线位置已正确设置
-    if (_drawingCrosshairPosition == null) {
-      debugPrint('警告：十字线位置为null，使用屏幕中心作为后备');
-      _drawingCrosshairPosition = Offset(mWidth / 2, mHeight / 2);
-    } else {
-      debugPrint('十字线初始位置: $_drawingCrosshairPosition');
-    }
-
-    if (_isSinglePointTool(toolType)) {
-      // 单点工具：直接进入位置选择
-      _isSelectingStartPoint = false;
-      _isSelectingEndPoint = false;
-      debugPrint('单点工具：进入位置选择模式');
-    } else {
-      // 双点工具：先选择起点
-      _isSelectingStartPoint = true;
-      _isSelectingEndPoint = false;
-      debugPrint('双点工具：进入起点选择模式');
-    }
-
-    _triggerDrawingToolHaptic();
-    notifyChanged();
-  }
-
-  // 确认起点位置
-  void _confirmStartPoint(Offset localPosition, DrawingToolType toolType) {
-    // 修复：使用十字线位置而不是点击位置
-    final confirmPosition = _drawingCrosshairPosition ?? localPosition;
-    debugPrint('确认起点位置: $confirmPosition (点击位置: $localPosition)');
-
-    // 记录绘图开始位置
-    _drawingStartPosition = confirmPosition;
-    _isDrawingToolMoving = false;
-
-    // 创建绘图工具并设置起点
-    _drawingToolManager.startDrawing(
-      confirmPosition,
-      kLineData: widget.datas,
-      scaleX: mScaleX,
-      scrollX: mScrollX,
-      getX: (index) => _painter?.getX(index.toInt()) ?? 0,
-      getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
-      getPriceFromY: (screenY) =>
-          _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
-      chartRect: _painter?.mMainRect ?? Rect.zero,
-    );
-
-    // 进入终点选择模式
-    _isSelectingStartPoint = false;
-    _isSelectingEndPoint = true;
-    debugPrint('进入终点选择模式');
-
-    _triggerDrawingToolHaptic();
-    notifyChanged();
-  }
-
-  // 确认终点位置
-  void _confirmEndPoint(Offset localPosition, DrawingToolType toolType) {
-    // 修复：使用十字线位置而不是点击位置
-    final confirmPosition = _drawingCrosshairPosition ?? localPosition;
-    debugPrint('确认终点位置: $confirmPosition (点击位置: $localPosition)');
-
-    // 更新终点并完成绘图
-    _drawingToolManager.updateDrawing(
-      confirmPosition,
-      kLineData: widget.datas,
-      scaleX: mScaleX,
-      scrollX: mScrollX,
-      getX: (index) => _painter?.getX(index.toInt()) ?? 0,
-      getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
-      getPriceFromY: (screenY) =>
-          _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
-      chartRect: _painter?.mMainRect ?? Rect.zero,
-    );
-
-    _drawingToolManager.finishDrawing();
-
-    // 退出十字线选择模式
-    _exitDrawingCrosshairMode();
-
-    debugPrint('双点工具绘制完成');
-    _triggerDrawingToolHaptic();
-    notifyChanged();
-  }
-
-  // 确认单点位置
-  void _confirmSinglePoint(Offset localPosition, DrawingToolType toolType) {
-    // 修复：使用十字线位置而不是点击位置
-    final confirmPosition = _drawingCrosshairPosition ?? localPosition;
-    debugPrint('确认单点位置: $confirmPosition (点击位置: $localPosition)');
-
-    // 记录绘图开始位置
-    _drawingStartPosition = confirmPosition;
-    _isDrawingToolMoving = false;
-
-    // 创建并完成单点工具
-    _drawingToolManager.startDrawing(
-      confirmPosition,
-      kLineData: widget.datas,
-      scaleX: mScaleX,
-      scrollX: mScrollX,
-      getX: (index) => _painter?.getX(index.toInt()) ?? 0,
-      getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
-      getPriceFromY: (screenY) =>
-          _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
-      chartRect: _painter?.mMainRect ?? Rect.zero,
-    );
-
-    _drawingToolManager.finishDrawing();
-
-    // 退出十字线选择模式
-    _exitDrawingCrosshairMode();
-
-    debugPrint('单点工具绘制完成');
-    _triggerDrawingToolHaptic();
-    notifyChanged();
-  }
-
-  // 退出绘图十字线选择模式
-  void _exitDrawingCrosshairMode() {
-    _isDrawingCrosshairMode = false;
-    _isSelectingStartPoint = false;
-    _isSelectingEndPoint = false;
-    _drawingCrosshairPosition = null;
-    _drawingStartPosition = null;
-    _isDrawingToolMoving = false;
-    debugPrint('退出绘图十字线选择模式');
-  }
-
-  // 新增：判断是否为单点工具
-  bool _isSinglePointTool(DrawingToolType toolType) {
-    return toolType == DrawingToolType.verticalLine ||
-        toolType == DrawingToolType.horizontalLine ||
-        toolType == DrawingToolType.crossLine ||
-        toolType == DrawingToolType.horizontalRay; // 水平射线也是单点工具
-  }
-
-  // 新增：判断是否为需要确定方向的工具（射线类工具）
-  bool _isDirectionTool(DrawingToolType toolType) {
-    return toolType == DrawingToolType.horizontalRay ||
-        toolType == DrawingToolType.ray;
-  }
-
-  // 新增：绘图工具开始拖拽事件
-  void _handleDrawingPanStart(Offset localPosition) {
-    debugPrint(
-        '_handleDrawingPanStart: position=$localPosition, currentToolType=${_drawingToolManager.currentToolType}');
-    if (_drawingToolManager.currentToolType == null) return;
-
-    // 修复：只有在十字线选择模式下才允许拖拽操作
-    if (!_isDrawingCrosshairMode) {
-      debugPrint('不在十字线选择模式，忽略拖拽开始');
-      return;
-    }
-
-    // 在选择终点模式下，拖拽可以更新终点位置
-    if (_isSelectingEndPoint &&
-        _drawingToolManager.currentDrawingTool != null) {
-      _handleDrawingPanUpdate(localPosition);
-    }
-  }
-
-  // 新增：绘图工具移动事件
-  void _handleDrawingPanUpdate(Offset localPosition) {
-    debugPrint(
-        '_handleDrawingPanUpdate: position=$localPosition, isDrawingCrosshairMode=$_isDrawingCrosshairMode');
-
-    // 修复：只有在十字线选择模式下才处理拖拽更新
-    if (!_isDrawingCrosshairMode) {
-      debugPrint('不在十字线选择模式，忽略拖拽更新');
-      return;
-    }
-
-    // 更新十字线位置（会自动处理边界限制）
-    _updateDrawingCrosshairPosition(localPosition, '_handleDrawingPanUpdate');
-
-    // 如果在选择终点模式下，实时更新绘图工具的终点
-    if (_isSelectingEndPoint &&
-        _drawingToolManager.currentDrawingTool != null) {
-      // 使用限制后的位置来更新绘图工具
-      final actualPosition = _drawingCrosshairPosition ?? localPosition;
-      _drawingToolManager.updateDrawing(
-        actualPosition,
-        kLineData: widget.datas,
-        scaleX: mScaleX,
-        scrollX: mScrollX,
-        getX: (index) => _painter?.getX(index.toInt()) ?? 0,
-        getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
-        getPriceFromY: (screenY) =>
-            _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
-        chartRect: _painter?.mMainRect ?? Rect.zero,
-      );
-      debugPrint('实时更新终点位置到: $actualPosition');
-    }
-
-    notifyChanged(); // 触发重绘以显示十字线移动和实时预览
-  }
-
-  // 新增：绘图工具结束拖拽事件
-  void _handleDrawingPanEnd() {
-    debugPrint(
-        '_handleDrawingPanEnd: isDrawingCrosshairMode=$_isDrawingCrosshairMode');
-
-    // 修复：拖拽结束不应该直接完成绘图，应该等待点击确认
-    // 这里只需要更新十字线位置，实际的确认需要点击操作
-    if (_isDrawingCrosshairMode) {
-      debugPrint('拖拽结束，等待点击确认位置');
-      // 不做任何操作，等待用户点击确认
-    }
-  }
-
-  // 新增：统一的十字线位置更新方法
-  void _updateDrawingCrosshairPosition(Offset newPosition, String source) {
-    final oldPosition = _drawingCrosshairPosition;
-
-    // 检查位置是否有效
-    if (newPosition.dx.isNaN ||
-        newPosition.dy.isNaN ||
-        newPosition.dx.isInfinite ||
-        newPosition.dy.isInfinite) {
-      debugPrint('警告：无效的十字线位置 $newPosition，来源: $source');
-      return;
-    }
-
-    // 获取正确的边界限制（使用K线图主区域）
-    Rect boundary;
-    if (_painter?.mMainRect != null) {
-      // 使用K线图主区域作为边界
-      boundary = _painter!.mMainRect;
-      debugPrint('使用K线图主区域边界: $boundary');
-    } else {
-      // 后备方案：使用整个组件区域
-      boundary = Rect.fromLTWH(0, 0, mWidth, mHeight);
-      debugPrint('使用组件边界: $boundary');
-    }
-
-    // 应用边界限制，确保十字线在有效区域内
-    final clampedPosition = Offset(
-      newPosition.dx.clamp(boundary.left, boundary.right),
-      newPosition.dy.clamp(boundary.top, boundary.bottom),
-    );
-
-    // 计算位置变化距离
-    double distance = 0.0;
-    if (oldPosition != null) {
-      distance = (clampedPosition - oldPosition).distance;
-    }
-
-    // 调试信息
-    if (newPosition != clampedPosition) {
-      debugPrint(
-          '十字线位置已限制在边界内 [来源: $source]: $newPosition -> $clampedPosition');
-    } else {
-      debugPrint(
-          '十字线位置更新 [来源: $source]: $oldPosition -> $clampedPosition (距离: ${distance.toStringAsFixed(2)})');
-    }
-
-    // 如果位置变化过大，可能是坐标系统问题
-    if (oldPosition != null && distance > 100) {
-      debugPrint('警告：十字线位置变化过大 (${distance.toStringAsFixed(2)}px)，可能存在坐标系统问题');
-    }
-
-    _drawingCrosshairPosition = clampedPosition;
-  }
-
   @override
   Widget build(BuildContext context) {
     if (widget.datas != null && widget.datas!.isEmpty) {
@@ -1005,538 +670,286 @@ class _KChartWidgetState extends State<KChartWidget>
                   }
                 }
               : null,
-          onPointerMove: (details) {
-            // 优先处理绘图工具的十字线选择模式
-            if (widget.enableDrawingTools &&
-                _isDrawingMode &&
-                _isDrawingCrosshairMode) {
-              // 更新十字线位置（会自动处理边界限制）
-              _updateDrawingCrosshairPosition(
-                  details.localPosition, 'onPointerMove');
-
-              // 如果正在选择终点，实时预览
-              if (_isSelectingEndPoint &&
-                  _drawingToolManager.currentDrawingTool != null) {
-                // 使用限制后的位置来更新绘图工具
-                final actualPosition =
-                    _drawingCrosshairPosition ?? details.localPosition;
-                _drawingToolManager.updateDrawing(
-                  actualPosition,
-                  kLineData: widget.datas,
-                  scaleX: mScaleX,
-                  scrollX: mScrollX,
-                  getX: (index) => _painter?.getX(index.toInt()) ?? 0,
-                  getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
-                  getPriceFromY: (screenY) =>
-                      _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
-                  chartRect: _painter?.mMainRect ?? Rect.zero,
-                );
+          child: GestureDetector(
+            onTapUp: (details) {
+              if (!isLongPress && !isScale) {
+                _stopAnimation();
               }
 
-              debugPrint('绘图十字线移动: ${_drawingCrosshairPosition}');
-              notifyChanged();
-              return;
-            }
-
-            // 修复：如果处于绘图模式但还没启动十字线选择，也要跟踪位置
-            if (widget.enableDrawingTools &&
-                _isDrawingMode &&
-                !_isDrawingCrosshairMode &&
-                _drawingToolManager.currentToolType != null) {
-              // 轻量级跟踪鼠标位置，为后续十字线显示做准备
-              // 注意：这里不触发重绘，避免干扰
-              debugPrint('预跟踪十字线位置: ${details.localPosition}');
-
-              // 获取边界
-              Rect boundary;
-              if (_painter?.mMainRect != null) {
-                boundary = _painter!.mMainRect;
-              } else {
-                boundary = Rect.fromLTWH(0, 0, mWidth, mHeight);
+              // 检测是否点击了十字线标签
+              if (_shouldShowCrossLine &&
+                  _painter != null &&
+                  _painter!.isCrossLineLabelTapped(details.localPosition)) {
+                double price = _painter!.getCurrentCrossLinePrice();
+                widget.onCrossLineTap?.call(price);
+                _triggerCrossLineTapHaptic(); // 添加：点击十字线标签震动
+                return;
               }
 
-              // 预设十字线位置（但不立即生效）
-              _drawingCrosshairPosition = Offset(
-                details.localPosition.dx.clamp(boundary.left, boundary.right),
-                details.localPosition.dy.clamp(boundary.top, boundary.bottom),
-              );
-
-              return;
-            }
-
-            // 处理绘图工具的指针移动（适用于桌面和移动端）
-            if (widget.enableDrawingTools &&
-                _isDrawingMode &&
-                _drawingToolManager.currentDrawingTool != null &&
-                _drawingToolManager.currentDrawingTool!.state ==
-                    DrawingToolState.drawing) {
-              // 检查是否已开始移动
-              if (_drawingStartPosition != null) {
-                double distance =
-                    (details.localPosition - _drawingStartPosition!).distance;
-                if (distance > _movementThreshold) {
-                  _isDrawingToolMoving = true;
-                  debugPrint('绘图工具开始移动，距离: $distance');
-                  _resetDrawingMovementState(); // 启动重置定时器
-                }
-              }
-
-              debugPrint('指针移动更新绘图工具位置: ${details.localPosition}');
-              _drawingToolManager.updateDrawing(
-                details.localPosition,
-                kLineData: widget.datas,
-                scaleX: mScaleX,
-                scrollX: mScrollX,
-                getX: (index) => _painter?.getX(index.toInt()) ?? 0,
-                getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
-                getPriceFromY: (screenY) =>
-                    _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
-                chartRect: _painter?.mMainRect ?? Rect.zero,
-              );
-              notifyChanged();
-            }
-          },
-          child: MouseRegion(
-            onHover: (event) {
-              // 优先处理绘图工具的十字线选择模式
-              if (widget.enableDrawingTools &&
-                  _isDrawingMode &&
-                  _isDrawingCrosshairMode) {
-                // 更新十字线位置
-                _updateDrawingCrosshairPosition(
-                    event.localPosition, 'onHover(crosshair)');
-
-                // 如果正在选择终点，实时预览
-                if (_isSelectingEndPoint &&
-                    _drawingToolManager.currentDrawingTool != null) {
-                  // 使用限制后的位置来更新绘图工具
-                  final actualPosition =
-                      _drawingCrosshairPosition ?? event.localPosition;
-                  _drawingToolManager.updateDrawing(
-                    actualPosition,
-                    kLineData: widget.datas,
-                    scaleX: mScaleX,
-                    scrollX: mScrollX,
-                    getX: (index) => _painter?.getX(index.toInt()) ?? 0,
-                    getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
-                    getPriceFromY: (screenY) =>
-                        _painter?.mMainRenderer.getYFromPrice(screenY) ??
-                        screenY,
-                    chartRect: _painter?.mMainRect ?? Rect.zero,
-                  );
-                }
-
-                debugPrint('绘图十字线鼠标悬停: ${_drawingCrosshairPosition}');
+              // 如果十字线正在显示且点击了其他区域，则隐藏十字线
+              if (_shouldShowCrossLine &&
+                  _painter != null &&
+                  _painter!.isInMainRect(details.localPosition)) {
+                _hideCrossLine();
                 notifyChanged();
                 return;
               }
 
-              // 修复：如果处于绘图模式但还没启动十字线选择，也要跟踪位置
-              if (widget.enableDrawingTools &&
-                  _isDrawingMode &&
-                  !_isDrawingCrosshairMode &&
-                  _drawingToolManager.currentToolType != null) {
-                // 轻量级跟踪鼠标位置，为后续十字线显示做准备
-                debugPrint('预跟踪十字线位置(hover): ${event.localPosition}');
+              // 处理绘图工具的点击事件
+              if (widget.enableDrawingTools && _isDrawingMode) {
+                final localPosition = details.localPosition;
 
-                // 获取边界
-                Rect boundary;
-                if (_painter?.mMainRect != null) {
-                  boundary = _painter!.mMainRect;
+                if (_drawingToolManager.currentToolType != null) {
+                  if (_drawingToolManager.currentDrawingTool == null) {
+                    _drawingToolManager.startDrawing(localPosition);
+                    _triggerDrawingToolHaptic(); // 添加：绘图工具操作震动
+                  } else {
+                    _drawingToolManager.updateDrawing(localPosition);
+                    _drawingToolManager.finishDrawing();
+                    _triggerDrawingToolHaptic(); // 添加：绘图工具操作震动
+                  }
+                  return;
                 } else {
-                  boundary = Rect.fromLTWH(0, 0, mWidth, mHeight);
+                  _drawingToolManager.selectTool(localPosition);
+                  _triggerDrawingToolHaptic(); // 添加：绘图工具操作震动
+                  return;
                 }
-
-                // 预设十字线位置（但不立即生效）
-                _drawingCrosshairPosition = Offset(
-                  event.localPosition.dx.clamp(boundary.left, boundary.right),
-                  event.localPosition.dy.clamp(boundary.top, boundary.bottom),
-                );
-
-                return;
               }
 
-              // 处理绘图工具的鼠标悬停移动
-              if (widget.enableDrawingTools &&
-                  _isDrawingMode &&
-                  _drawingToolManager.currentDrawingTool != null &&
-                  _drawingToolManager.currentDrawingTool!.state ==
-                      DrawingToolState.drawing) {
-                // 检查是否已开始移动（桌面端鼠标悬停）
-                if (_drawingStartPosition != null) {
-                  double distance =
-                      (event.localPosition - _drawingStartPosition!).distance;
-                  if (distance > _movementThreshold) {
-                    _isDrawingToolMoving = true;
-                    debugPrint('绘图工具开始鼠标移动，距离: $distance');
+              if (!widget.isTrendLine &&
+                  _painter != null &&
+                  _painter!.isInMainRect(details.localPosition)) {
+                // 只有在开启单点显示信息对话框且不在十字线模式时才设置isOnTap
+                if (!_shouldShowCrossLine) {
+                  isOnTap = true;
+                  if (mSelectX != details.localPosition.dx &&
+                      widget.isTapShowInfoDialog) {
+                    mSelectX = details.localPosition.dx;
+                    notifyChanged();
                   }
                 }
+              }
+              if (widget.isTrendLine && !isLongPress && enableCordRecord) {
+                enableCordRecord = false;
+                Offset p1 = Offset(getTrendLineX(), mSelectY);
+                if (!waitingForOtherPairofCords)
+                  lines.add(TrendLine(
+                      p1, Offset(-1, -1), trendLineMax!, trendLineScale!));
 
-                debugPrint('鼠标悬停更新绘图工具位置: ${event.localPosition}');
-                _drawingToolManager.updateDrawing(
-                  event.localPosition,
-                  kLineData: widget.datas,
-                  scaleX: mScaleX,
-                  scrollX: mScrollX,
-                  getX: (index) => _painter?.getX(index.toInt()) ?? 0,
-                  getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
-                  getPriceFromY: (screenY) =>
-                      _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
-                  chartRect: _painter?.mMainRect ?? Rect.zero,
-                );
+                if (waitingForOtherPairofCords) {
+                  var a = lines.last;
+                  lines.removeLast();
+                  lines
+                      .add(TrendLine(a.p1, p1, trendLineMax!, trendLineScale!));
+                  waitingForOtherPairofCords = false;
+                } else {
+                  waitingForOtherPairofCords = true;
+                }
                 notifyChanged();
               }
             },
-            child: GestureDetector(
-              onTapUp: (details) {
-                if (!isLongPress && !isScale) {
-                  _stopAnimation();
-                }
+            onHorizontalDragDown: (details) {
+              isOnTap = false;
+              _stopAnimation();
+              _onDragChanged(true);
+              // 不隐藏十字线，只是开始拖拽
+            },
+            onHorizontalDragUpdate: (details) {
+              if (isScale || isLongPress) return;
 
-                // 检测是否点击了十字线标签
-                if (_shouldShowCrossLine &&
-                    _painter != null &&
-                    _painter!.isCrossLineLabelTapped(details.localPosition)) {
-                  double price = _painter!.getCurrentCrossLinePrice();
-                  widget.onCrossLineTap?.call(price);
-                  _triggerCrossLineTapHaptic(); // 添加：点击十字线标签震动
-                  return;
-                }
-
-                // 如果十字线正在显示且点击了其他区域，则隐藏十字线
-                if (_shouldShowCrossLine &&
-                    _painter != null &&
-                    _painter!.isInMainRect(details.localPosition)) {
-                  _hideCrossLine();
-                  notifyChanged();
-                  return;
-                }
-
-                // 处理绘图工具的点击事件
-                if (widget.enableDrawingTools && _isDrawingMode) {
-                  final localPosition = details.localPosition;
-
-                  // 如果绘图工具正在移动，则不处理点击事件（避免意外确认）
-                  if (_isDrawingToolMoving) {
-                    debugPrint('绘图工具正在移动，忽略点击事件');
-                    _isDrawingToolMoving = false; // 重置移动状态
-                    return;
-                  }
-
-                  _handleDrawingToolTap(localPosition);
-                  return;
-                }
-
-                // 如果点击了其他区域且处于绘图十字线选择模式，则退出该模式
-                if (widget.enableDrawingTools && _isDrawingCrosshairMode) {
-                  _exitDrawingCrosshairMode();
-                  debugPrint('点击其他区域，退出绘图十字线选择模式');
-                  notifyChanged();
-                  return;
-                }
-
-                if (!widget.isTrendLine &&
-                    _painter != null &&
-                    _painter!.isInMainRect(details.localPosition)) {
-                  // 只有在开启单点显示信息对话框且不在十字线模式时才设置isOnTap
-                  if (!_shouldShowCrossLine) {
-                    isOnTap = true;
-                    if (mSelectX != details.localPosition.dx &&
-                        widget.isTapShowInfoDialog) {
-                      mSelectX = details.localPosition.dx;
-                      notifyChanged();
-                    }
-                  }
-                }
-                if (widget.isTrendLine && !isLongPress && enableCordRecord) {
-                  enableCordRecord = false;
-                  Offset p1 = Offset(getTrendLineX(), mSelectY);
-                  if (!waitingForOtherPairofCords)
-                    lines.add(TrendLine(
-                        p1, Offset(-1, -1), trendLineMax!, trendLineScale!));
-
-                  if (waitingForOtherPairofCords) {
-                    var a = lines.last;
-                    lines.removeLast();
-                    lines.add(
-                        TrendLine(a.p1, p1, trendLineMax!, trendLineScale!));
-                    waitingForOtherPairofCords = false;
-                  } else {
-                    waitingForOtherPairofCords = true;
-                  }
-                  notifyChanged();
-                }
-              },
-              onHorizontalDragDown: (details) {
-                // 绘图模式下不处理水平拖拽
-                if (widget.enableDrawingTools && _isDrawingMode) return;
-
-                isOnTap = false;
-                _stopAnimation();
-                _onDragChanged(true);
-              },
-              onHorizontalDragUpdate: (details) {
-                // 绘图模式下不处理水平拖拽
-                if (widget.enableDrawingTools && _isDrawingMode) return;
-
-                if (isScale || isLongPress) return;
-
+              // 只要不是绘图模式，直接平移
+              if (!(widget.enableDrawingTools &&
+                  _isDrawingMode &&
+                  _drawingToolManager.currentDrawingTool != null)) {
                 mScrollX = (mScrollX + (details.primaryDelta ?? 0) / mScaleX)
                     .clamp(0.0, ChartPainter.maxScrollX)
                     .toDouble();
                 notifyChanged();
-              },
-              onHorizontalDragEnd: (DragEndDetails details) {
-                // 绘图模式下不处理水平拖拽
-                if (widget.enableDrawingTools && _isDrawingMode) return;
+                return;
+              }
 
-                var velocity = details.velocity.pixelsPerSecond.dx;
-                _onFling(velocity);
-              },
-              onHorizontalDragCancel: () => _onDragChanged(false),
-              onScaleStart: (details) {
-                if (!widget.enablePinchZoom) return;
-
-                // 如果正在长按，则不启动缩放
-                if (isLongPress) {
-                  return;
-                }
-
-                // Web端：禁用单指缩放，只允许滚轮缩放
-                if (kIsWeb) {
-                  return;
-                }
-
-                // 移动端：检查是否为绘图模式
-                if (widget.enableDrawingTools && _isDrawingMode) {
-                  // 绘图模式下，处理绘图开始事件
-                  if (details.pointerCount == 1) {
-                    // 修复：使用localFocalPoint确保坐标系统一致
-                    final localPoint =
-                        details.localFocalPoint ?? details.focalPoint;
-                    _handleDrawingPanStart(localPoint);
-                    return;
-                  }
-                }
-
-                // 移动端：只有多指触摸才启动缩放
-                if (details.pointerCount < 2) {
-                  // 单指的情况，如果不是绘图模式，则启动拖拽
-                  if (!widget.enableDrawingTools || !_isDrawingMode) {
-                    isOnTap = false;
-                    _stopAnimation();
-                    _onDragChanged(true);
-                    _lastFocalPoint = details.focalPoint; // 记录初始触摸点
-                  }
-                  return;
-                }
-
-                isScale = true;
-                _lastScale = mScaleX;
-                _scaleCenter = details.focalPoint;
-                _triggerScaleHaptic(); // 添加：缩放开始震动
-                // 缩放开始时不隐藏十字线
-              },
-              onScaleUpdate: (details) {
-                if (!widget.enablePinchZoom) return;
-
-                // 如果正在长按，则不执行缩放
-                if (isLongPress) {
-                  return;
-                }
-
-                // Web端：禁用手势缩放，只允许滚轮缩放
-                if (kIsWeb) {
-                  return;
-                }
-
-                // 绘图模式下的处理
-                if (widget.enableDrawingTools && _isDrawingMode) {
-                  if (details.pointerCount == 1) {
-                    // 单指移动：处理绘图更新
-                    // 修复：使用localFocalPoint确保坐标系统一致
-                    final localPoint =
-                        details.localFocalPoint ?? details.focalPoint;
-                    _handleDrawingPanUpdate(localPoint);
-                    return;
-                  }
-                }
-
-                // 移动端：多指缩放处理
-                if (details.pointerCount >= 2) {
-                  if (isLongPress && !isScale) return;
-                  // 基于累积增量的缩放算法 - 类似拖拽的增量处理
-                  double scaleDelta = details.scale - 1.0;
-                  double sensitivity = widget.scaleSensitivity;
-                  double accumulatedDelta = scaleDelta * sensitivity;
-                  double factor;
-                  if (accumulatedDelta >= 0) {
-                    factor = 1.0 + (accumulatedDelta * 1.5);
-                  } else {
-                    factor = 1.0 + (accumulatedDelta * 2.0);
-                  }
-                  double targetScale = _lastScale * factor;
-                  if (_isAtMaxScale && accumulatedDelta < 0) {
-                    factor = 1.0 + (accumulatedDelta * 3.0);
-                    targetScale = _lastScale * factor;
-                  }
-                  if (_isAtMinScale && accumulatedDelta > 0) {
-                    factor = 1.0 + (accumulatedDelta * 3.0);
-                    targetScale = _lastScale * factor;
-                  }
-                  _updateScale(targetScale,
-                      widget.enableScaleCenterPoint ? _scaleCenter : null);
-                  // 缩放过程中不隐藏十字线
-                } else {
-                  // 单指拖拽处理（非绘图模式）
-                  if (!widget.enableDrawingTools || !_isDrawingMode) {
-                    if (isScale || isLongPress) return;
-
-                    // 计算拖拽的偏移量
-                    if (_lastFocalPoint != null) {
-                      double deltaX =
-                          details.focalPoint.dx - _lastFocalPoint!.dx;
-                      mScrollX = (mScrollX + deltaX / mScaleX)
-                          .clamp(0.0, ChartPainter.maxScrollX)
-                          .toDouble();
-                      notifyChanged();
-                    }
-                    _lastFocalPoint = details.focalPoint;
-                  }
-                }
-              },
-              onScaleEnd: (details) {
-                if (!widget.enablePinchZoom) return;
-
-                // 如果正在长按，则不结束缩放
-                if (isLongPress) {
-                  return;
-                }
-
-                // Web端：直接返回
-                if (kIsWeb) {
-                  return;
-                }
-
-                // 绘图模式下的处理
-                if (widget.enableDrawingTools && _isDrawingMode) {
-                  _handleDrawingPanEnd();
-                  return;
-                }
-
-                // 非绘图模式下的处理
-                if (details.pointerCount < 2) {
-                  // 单指结束：处理惯性滑动
-                  if (!isScale) {
-                    var velocity = details.velocity.pixelsPerSecond.dx;
-                    _onFling(velocity);
-                    _onDragChanged(false);
-                  }
-                  _lastFocalPoint = null; // 重置触摸点
-                } else {
-                  // 多指结束：结束缩放
-                  isScale = false;
-                  _lastScale = mScaleX;
-                  _scaleCenter = null;
-                }
-              },
-              onLongPressStart: (details) {
-                isOnTap = false;
-                isLongPress = true;
-                _showCrossLine(); // 显示十字线并取消延迟隐藏
-                _triggerLongPressHaptic(); // 添加：长按开始震动
-
-                // 初始化当前选中的K线索引
-                if (_painter != null) {
-                  _currentSelectedIndex =
-                      _painter!.calculateSelectedX(details.localPosition.dx);
-                }
-
-                if ((mSelectX != details.localPosition.dx ||
-                        mSelectY !=
-                            details.localPosition
-                                .dy) && // 修改：使用localPosition.dy而不是globalPosition.dy
-                    !widget.isTrendLine) {
-                  mSelectX = details.localPosition.dx;
-                  mSelectY = details.localPosition.dy; // 添加：保存本地Y坐标
-                  notifyChanged();
-                }
-                //For TrendLine
-                if (widget.isTrendLine && changeinXposition == null) {
-                  mSelectX = changeinXposition = details.localPosition.dx;
-                  mSelectY = changeinYposition = details.globalPosition.dy;
-                  notifyChanged();
-                }
-                //For TrendLine
-                if (widget.isTrendLine && changeinXposition != null) {
-                  changeinXposition = details.localPosition.dx;
-                  changeinYposition = details.globalPosition.dy;
-                  notifyChanged();
-                }
-              },
-              onLongPressMoveUpdate: (details) {
-                _showCrossLine(); // 移动时继续显示十字线并取消延迟隐藏
-                if ((mSelectX != details.localPosition.dx ||
-                        mSelectY !=
-                            details.localPosition
-                                .dy) && // 修改：使用localPosition.dy而不是globalPosition.dy
-                    !widget.isTrendLine) {
-                  // 检测K线选择变化并触发震动
-                  if (_painter != null) {
-                    int newSelectedIndex =
-                        _painter!.calculateSelectedX(details.localPosition.dx);
-                    if (newSelectedIndex != _currentSelectedIndex &&
-                        _currentSelectedIndex != -1) {
-                      _triggerKLineSelectionHaptic(); // 触发K线选择变化震动
-                    }
-                    _currentSelectedIndex = newSelectedIndex;
-                  }
-
-                  mSelectX = details.localPosition.dx;
-                  mSelectY = details.localPosition.dy; // 修改：使用本地Y坐标
-                  notifyChanged();
-                }
-                if (widget.isTrendLine) {
-                  mSelectX = mSelectX +
-                      (details.localPosition.dx - changeinXposition!);
-                  changeinXposition = details.localPosition.dx;
-                  mSelectY = mSelectY +
-                      (details.globalPosition.dy - changeinYposition!);
-                  changeinYposition = details.globalPosition.dy;
-                  notifyChanged();
-                }
-              },
-              onLongPressEnd: (details) {
-                isLongPress = false;
-                enableCordRecord = true;
-                mInfoWindowStream?.sink.add(null);
-                _startCrossLineHideTimer(); // 开始延迟隐藏十字线
-                _currentSelectedIndex = -1; // 重置选中索引
+              // 绘图模式下的拖拽
+              if (widget.enableDrawingTools &&
+                  _isDrawingMode &&
+                  _drawingToolManager.currentDrawingTool != null) {
+                _drawingToolManager.updateDrawing(details.localPosition);
                 notifyChanged();
-              },
-              child: Stack(
-                children: <Widget>[
-                  CustomPaint(
-                    size: Size(double.infinity, double.infinity),
-                    painter: _painter,
-                  ),
-                  // 绘图工具的十字线选择器
-                  if (widget.enableDrawingTools &&
-                      _isDrawingMode &&
-                      _isDrawingCrosshairMode &&
-                      _drawingCrosshairPosition != null)
-                    DrawingCrosshair(
-                      position: _drawingCrosshairPosition!,
-                      chartSize: Size(mWidth, mHeight),
-                      isSelectingStartPoint: _isSelectingStartPoint,
-                      isSelectingEndPoint: _isSelectingEndPoint,
-                      color: Colors.orange,
-                      strokeWidth: 1.5,
-                    ),
-                  if (widget.showInfoDialog) _buildInfoDialog(),
-                ],
-              ),
-            ), // 关闭MouseRegion
+                return;
+              }
+            },
+            onHorizontalDragEnd: (DragEndDetails details) {
+              var velocity = details.velocity.pixelsPerSecond.dx;
+              _onFling(velocity);
+              // 拖拽结束后不隐藏十字线
+            },
+            onHorizontalDragCancel: () => _onDragChanged(false),
+            onScaleStart: (details) {
+              if (!widget.enablePinchZoom) return;
+
+              // 如果正在长按，则不启动缩放
+              if (isLongPress) {
+                return;
+              }
+
+              // Web端：禁用单指缩放，只允许滚轮缩放
+              if (kIsWeb) {
+                return;
+              }
+
+              // 移动端：只有多指触摸才启动缩放
+              if (details.pointerCount < 2) {
+                return;
+              }
+
+              isScale = true;
+              _lastScale = mScaleX;
+              _scaleCenter = details.focalPoint;
+              _triggerScaleHaptic(); // 添加：缩放开始震动
+              // 缩放开始时不隐藏十字线
+            },
+            onScaleUpdate: (details) {
+              if (!widget.enablePinchZoom) return;
+
+              // 如果正在长按，则不执行缩放
+              if (isLongPress) {
+                return;
+              }
+
+              // Web端：禁用手势缩放，只允许滚轮缩放
+              if (kIsWeb) {
+                return;
+              }
+
+              // 移动端：只有多指触摸才执行缩放
+              if (details.pointerCount < 2) {
+                return;
+              }
+
+              if (isLongPress && !isScale) return;
+              // 基于累积增量的缩放算法 - 类似拖拽的增量处理
+              double scaleDelta = details.scale - 1.0;
+              double sensitivity = widget.scaleSensitivity;
+              double accumulatedDelta = scaleDelta * sensitivity;
+              double factor;
+              if (accumulatedDelta >= 0) {
+                factor = 1.0 + (accumulatedDelta * 1.5);
+              } else {
+                factor = 1.0 + (accumulatedDelta * 2.0);
+              }
+              double targetScale = _lastScale * factor;
+              if (_isAtMaxScale && accumulatedDelta < 0) {
+                factor = 1.0 + (accumulatedDelta * 3.0);
+                targetScale = _lastScale * factor;
+              }
+              if (_isAtMinScale && accumulatedDelta > 0) {
+                factor = 1.0 + (accumulatedDelta * 3.0);
+                targetScale = _lastScale * factor;
+              }
+              _updateScale(targetScale,
+                  widget.enableScaleCenterPoint ? _scaleCenter : null);
+              // 缩放过程中不隐藏十字线
+            },
+            onScaleEnd: (_) {
+              if (!widget.enablePinchZoom) return;
+
+              // 如果正在长按，则不结束缩放
+              if (isLongPress) {
+                return;
+              }
+
+              // Web端：直接返回
+              if (kIsWeb) {
+                return;
+              }
+
+              isScale = false;
+              _lastScale = mScaleX;
+              _scaleCenter = null;
+              // 缩放结束后不隐藏十字线
+            },
+            onLongPressStart: (details) {
+              isOnTap = false;
+              isLongPress = true;
+              _showCrossLine(); // 显示十字线并取消延迟隐藏
+              _triggerLongPressHaptic(); // 添加：长按开始震动
+
+              // 初始化当前选中的K线索引
+              if (_painter != null) {
+                _currentSelectedIndex =
+                    _painter!.calculateSelectedX(details.localPosition.dx);
+              }
+
+              if ((mSelectX != details.localPosition.dx ||
+                      mSelectY !=
+                          details.localPosition
+                              .dy) && // 修改：使用localPosition.dy而不是globalPosition.dy
+                  !widget.isTrendLine) {
+                mSelectX = details.localPosition.dx;
+                mSelectY = details.localPosition.dy; // 添加：保存本地Y坐标
+                notifyChanged();
+              }
+              //For TrendLine
+              if (widget.isTrendLine && changeinXposition == null) {
+                mSelectX = changeinXposition = details.localPosition.dx;
+                mSelectY = changeinYposition = details.globalPosition.dy;
+                notifyChanged();
+              }
+              //For TrendLine
+              if (widget.isTrendLine && changeinXposition != null) {
+                changeinXposition = details.localPosition.dx;
+                changeinYposition = details.globalPosition.dy;
+                notifyChanged();
+              }
+            },
+            onLongPressMoveUpdate: (details) {
+              _showCrossLine(); // 移动时继续显示十字线并取消延迟隐藏
+              if ((mSelectX != details.localPosition.dx ||
+                      mSelectY !=
+                          details.localPosition
+                              .dy) && // 修改：使用localPosition.dy而不是globalPosition.dy
+                  !widget.isTrendLine) {
+                // 检测K线选择变化并触发震动
+                if (_painter != null) {
+                  int newSelectedIndex =
+                      _painter!.calculateSelectedX(details.localPosition.dx);
+                  if (newSelectedIndex != _currentSelectedIndex &&
+                      _currentSelectedIndex != -1) {
+                    _triggerKLineSelectionHaptic(); // 触发K线选择变化震动
+                  }
+                  _currentSelectedIndex = newSelectedIndex;
+                }
+
+                mSelectX = details.localPosition.dx;
+                mSelectY = details.localPosition.dy; // 修改：使用本地Y坐标
+                notifyChanged();
+              }
+              if (widget.isTrendLine) {
+                mSelectX =
+                    mSelectX + (details.localPosition.dx - changeinXposition!);
+                changeinXposition = details.localPosition.dx;
+                mSelectY =
+                    mSelectY + (details.globalPosition.dy - changeinYposition!);
+                changeinYposition = details.globalPosition.dy;
+                notifyChanged();
+              }
+            },
+            onLongPressEnd: (details) {
+              isLongPress = false;
+              enableCordRecord = true;
+              mInfoWindowStream?.sink.add(null);
+              _startCrossLineHideTimer(); // 开始延迟隐藏十字线
+              _currentSelectedIndex = -1; // 重置选中索引
+              notifyChanged();
+            },
+            child: Stack(
+              children: <Widget>[
+                CustomPaint(
+                  size: Size(double.infinity, double.infinity),
+                  painter: _painter,
+                ),
+                if (widget.showInfoDialog) _buildInfoDialog(),
+              ],
+            ),
           ),
         );
       },
@@ -1668,8 +1081,12 @@ class _KChartWidgetState extends State<KChartWidget>
         : infoWidget;
   }
 
-  String getDate(int? date) => dateFormat(
-      DateTime.fromMillisecondsSinceEpoch(
-          date ?? DateTime.now().millisecondsSinceEpoch),
-      widget.timeFormat);
+  String getDate(int? date) {
+    // 获取动态计算的时间格式
+    List<String>? formats = widget.timeFormat ?? _painter?.mFormats;
+    return dateFormat(
+        DateTime.fromMillisecondsSinceEpoch(
+            date ?? DateTime.now().millisecondsSinceEpoch),
+        formats ?? TimeFormat.YEAR_MONTH_DAY);
+  }
 }

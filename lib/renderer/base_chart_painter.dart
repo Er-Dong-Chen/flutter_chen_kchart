@@ -94,15 +94,15 @@ abstract class BaseChartPainter extends CustomPainter {
     int secondTime = datas![1].time ?? 0;
     int time = secondTime - firstTime;
     time ~/= 1000;
-    //月线
-    if (time >= 24 * 60 * 60 * 28)
-      mFormats = [yy, '-', mm];
-    //日线等
-    else if (time >= 24 * 60 * 60)
+    
+    //日线及以上 (1天 = 86400秒): 显示年月日
+    if (time >= 24 * 60 * 60) {
       mFormats = [yy, '-', mm, '-', dd];
-    //小时线等
-    else
-      mFormats = [mm, '-', dd, ' ', HH, ':', nn];
+    }
+    //小时线和分钟线: 显示年月日时分
+    else {
+      mFormats = [yy, '-', mm, '-', dd, ' ', HH, ':', nn];
+    }
   }
 
   @override
@@ -127,9 +127,7 @@ abstract class BaseChartPainter extends CustomPainter {
       drawMaxAndMin(canvas);
       drawNowPrice(canvas);
 
-      if (shouldShowCrossLine ||
-          isLongPress == true ||
-          (isTapShowInfoDialog && isOnTap)) {
+      if (shouldShowCrossLine || isLongPress == true || (isTapShowInfoDialog && isOnTap)) {
         drawCrossLine(canvas, size);
         drawCrossLineText(canvas, size);
       }
