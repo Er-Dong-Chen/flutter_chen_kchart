@@ -1,5 +1,6 @@
 ## 2.1.0
 * Fixed: KChart intelligently displays the date and time format of the selected information according to the cycle
+* Changed: The kchart price tag is displayed on the right side
 
 ## 2.0.0
 * Added: Professional drawing tools including Trend Line, Trend Angle, Arrow, Vertical Line, Horizontal Line, Horizontal Ray, Ray, and Cross Line

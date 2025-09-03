@@ -197,7 +197,7 @@ class KChartWidget extends StatefulWidget {
     this.flingRatio = 0.9, // 更自然的惯性距离
     this.flingCurve = Curves.easeOutCubic, // 丝滑曲线
     this.isOnDrag,
-    this.verticalTextAlignment = VerticalTextAlignment.left,
+    this.verticalTextAlignment = VerticalTextAlignment.right,
     // 绘图工具配置
     this.enableDrawingTools = false, // 默认关闭绘图工具
     this.drawingToolManager,
