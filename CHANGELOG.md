@@ -1,3 +1,17 @@
+## 2.4.0
+* Fixed: Drawing content no longer displays outside the KChart area into indicator regions
+* Improved: Drawing boundary detection and clipping for better visual consistency
+
+## 2.3.0
+* Improved: Trend angle drawing style optimization for enhanced precision
+* Improved: Horizontal ray style synchronized with mainstream trading platforms
+* Enhanced: Visual consistency with professional trading interfaces
+
+## 2.2.0
+* Enhanced: Drawing content now moves and scales seamlessly with chart interactions
+* Improved: Synchronized drawing tool transformations with chart zoom and pan
+* Added: Dynamic drawing content positioning that follows chart movements
+
 ## 2.1.0
 * Fixed: KChart intelligently displays the date and time format of the selected information according to the cycle
 * Changed: The kchart price tag is displayed on the right side

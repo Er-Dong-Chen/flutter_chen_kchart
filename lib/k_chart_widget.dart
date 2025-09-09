@@ -729,6 +729,7 @@ class _KChartWidgetState extends State<KChartWidget>
       getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
       getPriceFromY: (screenY) =>
           _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
+      calculateSelectedX: (screenX) => _painter?.calculateSelectedXExtended(screenX) ?? 0,
       chartRect: _painter?.mMainRect ?? Rect.zero,
     );
 
@@ -757,6 +758,7 @@ class _KChartWidgetState extends State<KChartWidget>
       getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
       getPriceFromY: (screenY) =>
           _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
+      calculateSelectedX: (screenX) => _painter?.calculateSelectedXExtended(screenX) ?? 0,
       chartRect: _painter?.mMainRect ?? Rect.zero,
     );
 
@@ -790,6 +792,7 @@ class _KChartWidgetState extends State<KChartWidget>
       getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
       getPriceFromY: (screenY) =>
           _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
+      calculateSelectedX: (screenX) => _painter?.calculateSelectedXExtended(screenX) ?? 0,
       chartRect: _painter?.mMainRect ?? Rect.zero,
     );
 
@@ -875,6 +878,7 @@ class _KChartWidgetState extends State<KChartWidget>
         getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
         getPriceFromY: (screenY) =>
             _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
+        calculateSelectedX: (screenX) => _painter?.calculateSelectedXExtended(screenX) ?? 0,
         chartRect: _painter?.mMainRect ?? Rect.zero,
       );
       debugPrint('实时更新终点位置到: $actualPosition');
@@ -1029,6 +1033,7 @@ class _KChartWidgetState extends State<KChartWidget>
                   getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
                   getPriceFromY: (screenY) =>
                       _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
+                  calculateSelectedX: (screenX) => _painter?.calculateSelectedXExtended(screenX) ?? 0,
                   chartRect: _painter?.mMainRect ?? Rect.zero,
                 );
               }
@@ -1091,6 +1096,7 @@ class _KChartWidgetState extends State<KChartWidget>
                 getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
                 getPriceFromY: (screenY) =>
                     _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
+                calculateSelectedX: (screenX) => _painter?.calculateSelectedXExtended(screenX) ?? 0,
                 chartRect: _painter?.mMainRect ?? Rect.zero,
               );
               notifyChanged();
@@ -1122,6 +1128,7 @@ class _KChartWidgetState extends State<KChartWidget>
                     getPriceFromY: (screenY) =>
                         _painter?.mMainRenderer.getYFromPrice(screenY) ??
                         screenY,
+                    calculateSelectedX: (screenX) => _painter?.calculateSelectedXExtended(screenX) ?? 0,
                     chartRect: _painter?.mMainRect ?? Rect.zero,
                   );
                 }
@@ -1182,6 +1189,7 @@ class _KChartWidgetState extends State<KChartWidget>
                   getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
                   getPriceFromY: (screenY) =>
                       _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
+                  calculateSelectedX: (screenX) => _painter?.calculateSelectedXExtended(screenX) ?? 0,
                   chartRect: _painter?.mMainRect ?? Rect.zero,
                 );
                 notifyChanged();

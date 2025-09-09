@@ -53,10 +53,10 @@ packages:
     dependency: "direct main"
     description:
       name: dio
-      sha256: "253a18bbd4851fecba42f7343a1df3a9a4c1d31a2c1b37e221086b4fa8c8dbc9"
+      sha256: d90ee57923d1828ac14e492ca49440f65477f4bb1263575900be731a3dac66a9
       url: "https://pub.dev"
     source: hosted
-    version: "5.8.0+1"
+    version: "5.9.0"
   dio_web_adapter:
     dependency: transitive
     description:
@@ -98,25 +98,25 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_chen_common
-      sha256: "38f8d57e339806f652cb8779434fb3ae34c7076110757a1cf2aa60653394dda2"
+      sha256: "05e35c55fb6b48a9beb5970ac2db9700ed76cf7b2fd8d5ecfc8f0f847d8e801e"
       url: "https://pub.dev"
     source: hosted
-    version: "2.9.1"
+    version: "2.10.1"
   flutter_chen_kchart:
     dependency: "direct main"
     description:
       path: ".."
       relative: true
     source: path
-    version: "2.0.0"
+    version: "2.1.0"
   flutter_chen_refresh:
     dependency: transitive
     description:
       name: flutter_chen_refresh
-      sha256: "73463ea9f1d842ae3bd7929e3f345737c92f5e346fa27a36c2f0880e45a6bcfa"
+      sha256: adf07842f7d0d3ffc8b88efd810d435e9f9c784b97800ecdaef91dec1288a05f
       url: "https://pub.dev"
     source: hosted
-    version: "3.0.2"
+    version: "3.0.3"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -223,6 +223,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.15.0"
+  mime:
+    dependency: transitive
+    description:
+      name: mime
+      sha256: "41a20518f0cb1256669420fdba0cd90d21561e560ac240f26ef8322e45bb7ed6"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
   path:
     dependency: transitive
     description:
@@ -283,10 +291,10 @@ packages:
     dependency: transitive
     description:
       name: shared_preferences_android
-      sha256: "20cbd561f743a342c76c151d6ddb93a9ce6005751e7aa458baad3858bfbfb6ac"
+      sha256: "5bcf0772a761b04f8c6bf814721713de6f3e5d9d89caf8d3fe031b02a342379e"
       url: "https://pub.dev"
     source: hosted
-    version: "2.4.10"
+    version: "2.4.11"
   shared_preferences_foundation:
     dependency: transitive
     description:

@@ -359,6 +359,15 @@ abstract class BaseChartPainter extends CustomPainter {
     return mSelectedIndex;
   }
 
+  ///扩展版本：计算x值对应的index，支持超出数据范围（用于绘制工具）
+  int calculateSelectedXExtended(double selectX) {
+    // 直接计算索引，不限制在数据范围内
+    double translateX = xToTranslateX(selectX);
+    // 使用简化的索引计算，支持负数和超出数据范围的索引
+    int index = (translateX / mPointWidth).round();
+    return index;
+  }
+
   ///translateX转化为view中的x
   double translateXtoX(double translateX) =>
       (translateX + mTranslateX) * scaleX;

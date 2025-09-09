@@ -217,17 +217,23 @@ class ChartPainter extends BaseChartPainter {
     if (isTrendLine == true) drawTrendLines(canvas, size);
     canvas.restore();
 
-    // 在恢复canvas状态后绘制绘图工具，避免受到缩放和平移影响
+    // 在恢复canvas状态后绘制绘图工具，现在传递正确的坐标转换函数和主图边界
     if (drawingToolManager != null) {
       debugPrint('ChartPainter.drawChart: 开始绘制绘图工具');
-      // 直接绘制，因为绘图工具存储的已经是屏幕坐标
       drawingToolManager!.drawTools(
         canvas,
         size,
-        1.0, // scaleX = 1.0，因为不需要额外缩放
-        0.0, // scrollX = 0.0，因为不需要额外偏移
-        (index) => index, // getX: 直接返回输入值（屏幕坐标）
-        (price) => price, // getY: 直接返回输入值（屏幕坐标）
+        scaleX,     // 传递当前的缩放比例
+        scrollX,    // 传递当前的滚动位置
+        (index) {
+          // 扩展的X坐标转换函数，支持超出数据范围的索引
+          // 使用与getX相同的计算逻辑，但不限制索引范围
+          final absoluteX = index * mPointWidth + mPointWidth / 2;
+          final screenX = translateXtoX(absoluteX);
+          debugPrint('扩展坐标转换: index=$index -> absoluteX=$absoluteX -> screenX=$screenX (支持空白区域)');
+          return screenX;
+        },
+        getMainY,   // 传递正确的Y坐标转换函数（价格转屏幕坐标）
       );
     }
   }
