@@ -1,101 +1,104 @@
+## 2.4.0
+* Fixed: Drawing content no longer displays outside the KChart area into indicator regions
+* Improved: Drawing boundary detection and clipping for better visual consistency
+
+## 2.3.0
+* Improved: Trend angle drawing style optimization for enhanced precision
+* Improved: Horizontal ray style synchronized with mainstream trading platforms
+* Enhanced: Visual consistency with professional trading interfaces
+
+## 2.2.0
+* Enhanced: Drawing content now moves and scales seamlessly with chart interactions
+* Improved: Synchronized drawing tool transformations with chart zoom and pan
+* Added: Dynamic drawing content positioning that follows chart movements
+
+## 2.1.0
+* Fixed: KChart intelligently displays the date and time format of the selected information according to the cycle
+* Changed: The kchart price tag is displayed on the right side
+
 ## 2.0.0
-* Added: Professional drawing tools including Trend Line, Trend Angle, Arrow, Vertical Line, Horizontal Line, Horizontal Ray, Ray, and Cross Line.
-* Added: Interactive modes for drawing tools: TradingView-style crosshair selection, continuous drawing mode, magnet snapping mode, show/hide drawings, clear all drawings, and precise positioning control.
-* Added: Vibration feedback during interactions.
-* Added: Cross line label that indicates the fluctuation range.
-* Added: Click callback on cross line label for quick order placement.
+* Added: Professional drawing tools including Trend Line, Trend Angle, Arrow, Vertical Line, Horizontal Line, Horizontal Ray, Ray, and Cross Line
+* Added: Interactive modes for drawing tools: TradingView-style crosshair selection, continuous drawing mode, magnet snapping mode, show/hide drawings, clear all drawings, and precise positioning control
+* Added: Vibration feedback during interactions
+* Added: Cross line label that indicates the fluctuation range
+* Added: Click callback on cross line label for quick order placement
 
 ## 1.2.0
-* IMPROVED: Optimize the selection line
+* Improved: Selection line optimization
 
 ## 1.1.0
-* IMPROVED: Gesture interaction and sensitivity response
+* Improved: Gesture interaction and sensitivity response
 
 ## 1.0.0
-* NEW: Enhanced theme system with light/dark theme support
-* NEW: Improved gesture interactions with better pinch-to-zoom and scroll zoom
-* NEW: Added theme switching functionality with ChartThemeManager
-* IMPROVED: Optimized chart styling and visual appearance
-* IMPROVED: Enhanced performance for large datasets
-* IMPROVED: Better touch responsiveness and smooth animations
-* FIXED: Various UI improvements and bug fixes
+* Added: Enhanced theme system with light/dark theme support
+* Added: Improved gesture interactions with better pinch-to-zoom and scroll zoom
+* Added: Theme switching functionality with ChartThemeManager
+* Improved: Optimized chart styling and visual appearance
+* Improved: Enhanced performance for large datasets
+* Improved: Better touch responsiveness and smooth animations
+* Fixed: Various UI improvements and bug fixes
 
 ## 0.7.1
-* Optimize performance on the web.
+* Improved: Performance optimization on the web
 
 ## 0.7.0
-
-* Add `xFrontPadding`. (padding in front. default 100)
-* Fix: KChart and DepthChart onPress selection when they don't fill the whole screen.
+* Added: `xFrontPadding` parameter (padding in front, default 100)
+* Fixed: KChart and DepthChart onPress selection when they don't fill the whole screen
 
 ## 0.6.1
-
-* Add `chartColors.lineFillInsideColor`.
-* Add `materialInfoDialog` config.
-* Fix: removes duplicate crossLine and crossLine text rendering.
+* Added: `chartColors.lineFillInsideColor` configuration
+* Added: `materialInfoDialog` config
+* Fixed: Duplicate crossLine and crossLine text rendering
 
 ## 0.6.0
-
-* Delete `bgColor` api.('Use `chartColors.bgColor` instead.')
-* Add TradeLine.
-* Fixed about data not contain `change` or `radio`.
+* Breaking: Removed `bgColor` API (use `chartColors.bgColor` instead)
+* Added: TradeLine support
+* Fixed: Data handling when `change` or `radio` properties are missing
 
 ## 0.5.0
-
-* Fixed Vertical text alignment and make amount nullable.
-* Fixed nowPrice text painting position.
-* Add click show detailed data.
-* View display area boundary value drawing.
-* Always show the now price.
+* Fixed: Vertical text alignment and nullable amount support
+* Fixed: NowPrice text painting position
+* Added: Click to show detailed data functionality
+* Added: View display area boundary value drawing
+* Added: Always show the current price
 
 ## 0.4.1
-
-* Fix a bug about NPE.
+* Fixed: NPE bug resolution
 
 ## 0.4.0
-
-* Changed the way the marker values are displayed, from right to left.
-* Changed the UI when gridlines are hidden.
-* Upgraded the display of real-time prices.
-* More configurations are available.
+* Changed: Marker values display direction from right to left
+* Changed: UI when gridlines are hidden
+* Improved: Real-time prices display
+* Added: More configuration options
 
 ## 0.3.2
-
-* NEW: You can show or hide the grid.
-* Changed the multi-language implementation.(Please migrate to the new way as soon as possible)
-* Changed the period of kdj from 14 to 9.
+* Added: Show or hide grid functionality
+* Changed: Multi-language implementation (please migrate to the new way)
+* Changed: KDJ period from 14 to 9
 
 ## 0.3.1
-
-* NEW: More color can change.
+* Added: More customizable colors
 
 ## 0.3.0
-
-* Breaking Change: null safety.
-* NEW: Add line under Touch Dialog.
+* Breaking: Null safety migration
+* Added: Line under Touch Dialog
 
 ## 0.2.1
-
-* Fix: Fixed some UI issues about zooming
+* Fixed: UI issues related to zooming
 
 ## 0.2.0
-
-* NEW: Added real-time price display
-* Breaking Change: Ability to customise UI of KChartWidget.(The chartStyle and chartColors must be specified)
+* Added: Real-time price display
+* Breaking: Customizable UI for KChartWidget (chartStyle and chartColors must be specified)
 
 ## 0.1.4
-
-* NEW: Add onSecondaryTap
-* Changed the k-line drawing logic
+* Added: onSecondaryTap functionality
+* Changed: K-line drawing logic
 
 ## 0.1.3
-
-* NEW: Add CCI
+* Added: CCI indicator support
 
 ## 0.1.2
-
-* NEW: Add Hidden Volume
+* Added: Hidden Volume feature
 
 ## 0.1.1
-
-* NEW: Initial Release.
+* Added: Initial release
