@@ -5,6 +5,7 @@
         <entry key="async">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/async-2.11.0/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/async-2.11.0/lib" />
             </list>
           </value>
@@ -12,6 +13,7 @@
         <entry key="boolean_selector">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/boolean_selector-2.1.1/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/boolean_selector-2.1.1/lib" />
             </list>
           </value>
@@ -19,6 +21,7 @@
         <entry key="characters">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/characters-1.3.0/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/characters-1.3.0/lib" />
             </list>
           </value>
@@ -26,6 +29,7 @@
         <entry key="clock">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/clock-1.1.1/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/clock-1.1.1/lib" />
             </list>
           </value>
@@ -33,6 +37,7 @@
         <entry key="collection">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/collection-1.19.0/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/collection-1.19.0/lib" />
             </list>
           </value>
@@ -61,6 +66,7 @@
         <entry key="fake_async">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/fake_async-1.3.1/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/fake_async-1.3.1/lib" />
             </list>
           </value>
@@ -82,6 +88,7 @@
         <entry key="flutter">
           <value>
             <list>
+              <option value="$USER_HOME$/fvm/default/packages/flutter/lib" />
               <option value="$USER_HOME$/fvm/versions/3.27.2/packages/flutter/lib" />
             </list>
           </value>
@@ -117,6 +124,7 @@
         <entry key="flutter_test">
           <value>
             <list>
+              <option value="$USER_HOME$/fvm/default/packages/flutter_test/lib" />
               <option value="$USER_HOME$/fvm/versions/3.27.2/packages/flutter_test/lib" />
             </list>
           </value>
@@ -145,6 +153,7 @@
         <entry key="leak_tracker">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/leak_tracker-10.0.7/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/leak_tracker-10.0.7/lib" />
             </list>
           </value>
@@ -152,6 +161,7 @@
         <entry key="leak_tracker_flutter_testing">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/leak_tracker_flutter_testing-3.0.8/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/leak_tracker_flutter_testing-3.0.8/lib" />
             </list>
           </value>
@@ -159,6 +169,7 @@
         <entry key="leak_tracker_testing">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/leak_tracker_testing-3.0.1/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/leak_tracker_testing-3.0.1/lib" />
             </list>
           </value>
@@ -180,6 +191,7 @@
         <entry key="matcher">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/matcher-0.12.16+1/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/matcher-0.12.16+1/lib" />
             </list>
           </value>
@@ -187,6 +199,7 @@
         <entry key="material_color_utilities">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/material_color_utilities-0.11.1/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/material_color_utilities-0.11.1/lib" />
             </list>
           </value>
@@ -194,6 +207,7 @@
         <entry key="meta">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/meta-1.15.0/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/meta-1.15.0/lib" />
             </list>
           </value>
@@ -201,6 +215,7 @@
         <entry key="path">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/path-1.9.0/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/path-1.9.0/lib" />
             </list>
           </value>
@@ -292,6 +307,7 @@
         <entry key="sky_engine">
           <value>
             <list>
+              <option value="$USER_HOME$/fvm/default/bin/cache/pkg/sky_engine/lib" />
               <option value="$USER_HOME$/fvm/versions/3.27.2/bin/cache/pkg/sky_engine/lib" />
             </list>
           </value>
@@ -299,6 +315,7 @@
         <entry key="source_span">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/source_span-1.10.0/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/source_span-1.10.0/lib" />
             </list>
           </value>
@@ -306,6 +323,7 @@
         <entry key="stack_trace">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/stack_trace-1.12.0/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/stack_trace-1.12.0/lib" />
             </list>
           </value>
@@ -313,6 +331,7 @@
         <entry key="stream_channel">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/stream_channel-2.1.2/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/stream_channel-2.1.2/lib" />
             </list>
           </value>
@@ -320,6 +339,7 @@
         <entry key="string_scanner">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/string_scanner-1.3.0/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/string_scanner-1.3.0/lib" />
             </list>
           </value>
@@ -327,6 +347,7 @@
         <entry key="term_glyph">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/term_glyph-1.2.1/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/term_glyph-1.2.1/lib" />
             </list>
           </value>
@@ -334,6 +355,7 @@
         <entry key="test_api">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/test_api-0.7.3/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/test_api-0.7.3/lib" />
             </list>
           </value>
@@ -348,6 +370,7 @@
         <entry key="vector_math">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/vector_math-2.1.4/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/vector_math-2.1.4/lib" />
             </list>
           </value>
@@ -355,6 +378,7 @@
         <entry key="vm_service">
           <value>
             <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/vm_service-14.3.0/lib" />
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/vm_service-14.3.0/lib" />
             </list>
           </value>
@@ -425,6 +449,30 @@
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/vm_service-14.3.0/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/web-1.1.1/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/xdg_directories-1.1.0/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/async-2.11.0/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/boolean_selector-2.1.1/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/characters-1.3.0/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/clock-1.1.1/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/collection-1.19.0/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/fake_async-1.3.1/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/leak_tracker-10.0.7/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/leak_tracker_flutter_testing-3.0.8/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/leak_tracker_testing-3.0.1/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/matcher-0.12.16+1/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/material_color_utilities-0.11.1/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/meta-1.15.0/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/path-1.9.0/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/source_span-1.10.0/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/stack_trace-1.12.0/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/stream_channel-2.1.2/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/string_scanner-1.3.0/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/term_glyph-1.2.1/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/test_api-0.7.3/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/vector_math-2.1.4/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.flutter-io.cn/vm_service-14.3.0/lib" />
+      <root url="file://$USER_HOME$/fvm/default/bin/cache/pkg/sky_engine/lib" />
+      <root url="file://$USER_HOME$/fvm/default/packages/flutter/lib" />
+      <root url="file://$USER_HOME$/fvm/default/packages/flutter_test/lib" />
       <root url="file://$USER_HOME$/fvm/versions/3.27.2/bin/cache/pkg/sky_engine/lib" />
       <root url="file://$USER_HOME$/fvm/versions/3.27.2/packages/flutter/lib" />
       <root url="file://$USER_HOME$/fvm/versions/3.27.2/packages/flutter_test/lib" />

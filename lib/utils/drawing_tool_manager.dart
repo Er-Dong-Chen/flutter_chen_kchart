@@ -590,7 +590,7 @@ class DrawingToolManager {
       }
 
       _tools.add(tool);
-        }
+    }
 
     _notifyToolsChanged();
   }
