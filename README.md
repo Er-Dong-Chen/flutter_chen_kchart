@@ -125,115 +125,6 @@ KChartWidget(
 
 ---
 
-## 📋 版本说明 / Version Description
-
-<table>
-<tr>
-<th width="50%">🆓 免费版本 1.x / Free Version</th>
-<th width="50%">💼 商用版本 2.x / Commercial Version</th>
-</tr>
-<tr>
-<td>
-<strong>开源免费，MIT 许可</strong><br>
-• 基础 K线图表功能<br>
-• 基础主题及配置<br>
-• 基础技术指标<br>
-• 基础交互体验<br>
-• 基础性能模式<br>
-• 社区支持
-</td>
-<td>
-<strong>商业许可，付费使用</strong><br>
-• 全部 1.x 功能<br>
-• 高级技术指标<br>
-• 专业绘图工具套件<br>
-• 高度定制，灵活配置<br>
-• TradingView 级交互体验<br>
-• 性能优化模式<br>
-• 优先技术支持<br>
-• 商业授权保障
-</td>
-</tr>
-</table>
-
----
-
-## ✨ 功能对比 / Feature Comparison
-
-| 功能特性 / Features                     | 免费版 1.x | 商用版 2.x |
-|-------------------------------------|:---------:|:---------:|
-| **基础功能 / Basic**                    |||
-| K线图表 / Candlestick Chart            | ✅ | ✅ |
-| 多平台支持 / Cross-Platform              | ✅ | ✅ |
-| 双指缩放 / Pinch Zoom                   | ✅ | ✅ |
-| 滚轮缩放 / Mouse Wheel Zoom             | ✅ | ✅ |
-| 平移 / Pan                            | ✅ | ✅ |
-| 长按详情 / Long Press Details           | ✅ | ✅ |
-| 点击显示详情 / Click Details              | ✅ | ✅ |
-| 实时价格显示 / Real-time Price            | ✅ | ✅ |
-| **主题系统 / Theme**                    |||
-| 基础亮/暗主题                             | ✅ | ✅ |
-| 主题管理器 / Theme Manager               | ✅ | ✅ |
-| 主题切换功能 / Theme Toggle               | ✅ | ✅ |
-| 高级主题定制                              | ✅ | ✅ |
-| 多主题预设                               | ✅ | ✅ |
-| **UI 定制 / UI Customization**        |||
-| 颜色自定义 / Color Customization         | ✅ | ✅ |
-| 网格显示/隐藏 / Grid Toggle               | ✅ | ✅ |
-| 详情对话框自定义 / Custom Dialog            | ✅ | ✅ |
-| 成交量隐藏 / Hidden Volume               | ✅ | ✅ |
-| 更多灵活配置 / Front Padding              | ❌ | ✅ |
-| **技术指标 / Indicators**               |||
-| MA（移动平均线）                           | ✅ | ✅ |
-| BOLL（布林带）                           | ✅ | ✅ |
-| MACD                                | ✅ | ✅ |
-| KDJ                                 | ✅ | ✅ |
-| RSI                                 | ✅ | ✅ |
-| WR（威廉指标）                            | ✅ | ✅ |
-| CCI                                 | ✅ | ✅ |
-| **智能交互 / Smart Interaction**        |||
-| 智能十字线 / Intelligent Crosshair       | ❌ | ✅ |
-| 震动反馈 / Vibration Feedback           | ❌ | ✅ |
-| 十字线标签波动范围 / Crosshair Range         | ❌ | ✅ |
-| 十字线标签回调 / Crosshair Callback        | ❌ | ✅ |
-| 快速下单 / Quick Order Placement        | ❌ | ✅ |
-| TradingView交互优化 / Enhanced Gestures | ❌ | ✅ |
-| **绘图工具 / Drawing Tools**            |||
-| 趋势线/趋势角度 / Trend Line               | ❌ | ✅ |
-| 水平线/垂直线 / H/V Lines                 | ❌ | ✅ |
-| 射线/水平射线 / Ray                       | ❌ | ✅ |
-| 箭头标注 / Arrow Annotation             | ❌ | ✅ |
-| 十字线 / Crosshair Tool                | ❌ | ✅ |
-| **绘图模式 / Drawing Modes**            |||
-| 单次绘制 / Single Draw                  | ❌ | ✅ |
-| 连续绘制 / Continuous Draw              | ❌ | ✅ |
-| 精确控制 / Precise Control              | ❌ | ✅ |
-| 显示隐藏 / Show/Hide                    | ❌ | ✅ |
-| 清除绘图 / Batch Clear                  | ❌ | ✅ |
-| 磁铁吸附 / Magnetic Snap                | ❌ | ✅ |
-| **性能优化 / Performance**              |||
-| 基础性能优化 / Basic Optimization         | ✅ | ✅ |
-| Web 性能优化 / Web Optimization         | ✅ | ✅ |
-| 大数据集支持 / Large Dataset              | 基础 | 增强 |
-| 性能优化模式 / Performance Mode           | ❌ | ✅ |
-| **支持服务 / Support**                  |||
-| 社区支持 / Community Support            | ✅ | ✅ |
-| 优先技术支持 / Priority Support           | ❌ | ✅ |
-| 商业授权保障 / Commercial License         | ❌ | ✅ |
-| 终身源码授权 / Lifetime Source            | ❌ | 可选 |****
-
----
-
-## 💰 商用版获取 / Get Commercial Version
-
-### 📞 联系方式 / Contact
-
-- 💬 **微信咨询**：`Chen-Taurus-0510`
-- 📧 **邮箱联系**：`1251752648@qq.com`
-- 🐛 **GitHub Issues**：[技术问题讨论](https://github.com/Er-Dong-Chen/flutter_chen_kchart/issues)
-
----
-
 ## 📚 文档与示例 / Documentation
 
 - 📖 **[API 文档](https://pub.dev/documentation/flutter_chen_kchart/latest/)**
@@ -242,57 +133,15 @@ KChartWidget(
 
 ---
 
-## 🤝 社区与支持 / Community & Support
-
-- 🌟 **[GitHub](https://github.com/Er-Dong-Chen/flutter_chen_kchart)** - Star 支持我们
-- 🐛 **[Issues](https://github.com/Er-Dong-Chen/flutter_chen_kchart/issues)** - Bug 反馈
-- 💬 **[Discussions](https://github.com/Er-Dong-Chen/flutter_chen_kchart/discussions)** - 功能讨论
-- 📱 **微信群** - 添加微信 备注"入群"
-
----
-
-## 🎯 路线图 / Roadmap
-
-### v2.x 商用版计划
-- [x] v2.0.0 - 绘图工具及模式套件、TradingView交互体验
-- [ ] 绘图新增完善
-- [ ] 高级技术指标
-- [ ] 完全对标TradingView/主流交易所KChart
-
----
-
 ## 捐赠支持 / Donation Support
 
-如果免费版对你有帮助，欢迎捐赠支持开发：
+如果对你有帮助，欢迎捐赠支持开发：
 
 <div style="display: flex; justify-content: space-between;">
   <img src="https://er-dong-chen.github.io/images/wechat.png" alt="微信赞赏" style="width: 48%;">
   <img src="https://er-dong-chen.github.io/images/alipay.png" alt="支付宝捐赠" style="width: 48%;">
 </div>
 
----
-
-## 📜 许可证 / License
-
-- **免费版 1.x**: [MIT License](LICENSE)
-- **商用版 2.x**: 商业许可证 + 技术支持
-
----
-
-## 📢 结语 / Final Words
-
-> 🎉 **Flutter 终于有了真正可商用的 K线图表库！**
->
-> 🚀 **不再需要 WebView，不再被 TradingView 限制**
->
-> 💪 **让你的 Flutter 金融应用更专业、更流畅！**
-
-### 立即开始 / Get Started Now
-
-1. ⭐ **GitHub Star** 支持我们
-2. 📦 **安装免费版** 体验功能
-3. 💬 **联系我们** 获取商用版
-4. 🚀 **构建你的** 专业金融应用
 
 ---
 

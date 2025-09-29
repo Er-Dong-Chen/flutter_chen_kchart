@@ -1,3 +1,6 @@
+## 2.4.1
+* UPDATE: README
+
 ## 2.4.0
 * Fixed: Drawing content no longer displays outside the KChart area into indicator regions
 * Improved: Drawing boundary detection and clipping for better visual consistency
