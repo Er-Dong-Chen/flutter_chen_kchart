@@ -94,7 +94,7 @@ abstract class BaseChartPainter extends CustomPainter {
     int secondTime = datas![1].time ?? 0;
     int time = secondTime - firstTime;
     time ~/= 1000;
-    
+
     if (time >= 24 * 60 * 60) {
       mFormats = [yyyy, '-', mm, '-', dd];
     } else {
@@ -124,7 +124,9 @@ abstract class BaseChartPainter extends CustomPainter {
       drawMaxAndMin(canvas);
       drawNowPrice(canvas);
 
-      if (shouldShowCrossLine || isLongPress == true || (isTapShowInfoDialog && isOnTap)) {
+      if (shouldShowCrossLine ||
+          isLongPress == true ||
+          (isTapShowInfoDialog && isOnTap)) {
         drawCrossLine(canvas, size);
         drawCrossLineText(canvas, size);
       }

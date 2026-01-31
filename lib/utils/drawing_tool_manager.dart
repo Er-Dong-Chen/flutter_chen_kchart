@@ -109,7 +109,8 @@ class DrawingToolManager {
     double Function(double)? getX,
     double Function(double)? getY,
     double Function(double)? getPriceFromY, // 新增：从Y坐标反推价格的函数
-    int Function(double)? calculateSelectedX, // 新增：屏幕X转索引的函数（直接使用BaseChartPainter的方法）
+    int Function(double)?
+        calculateSelectedX, // 新增：屏幕X转索引的函数（直接使用BaseChartPainter的方法）
     Rect? chartRect,
   }) {
     debugPrint('DrawingToolManager.startDrawing: $_currentToolType at $point');
@@ -147,8 +148,9 @@ class DrawingToolManager {
         int selectedIndex = calculateSelectedX(adjustedPoint.dx);
         logicalIndex = selectedIndex.toDouble();
         logicalPrice = getPriceFromY(adjustedPoint.dy);
-        debugPrint('startDrawing坐标转换: 屏幕点($adjustedPoint) -> selectedIndex=$selectedIndex, 索引($logicalIndex), 价格($logicalPrice)');
-        
+        debugPrint(
+            'startDrawing坐标转换: 屏幕点($adjustedPoint) -> selectedIndex=$selectedIndex, 索引($logicalIndex), 价格($logicalPrice)');
+
         // 验证数据有效性
         if (logicalIndex.isNaN || logicalIndex.isInfinite) {
           debugPrint('警告: logicalIndex无效: $logicalIndex');
@@ -164,15 +166,16 @@ class DrawingToolManager {
         logicalPrice = null;
       }
     } else {
-      debugPrint('坐标转换函数为null: calculateSelectedX=$calculateSelectedX, getPriceFromY=$getPriceFromY');
+      debugPrint(
+          '坐标转换函数为null: calculateSelectedX=$calculateSelectedX, getPriceFromY=$getPriceFromY');
     }
 
     switch (_currentToolType!) {
       case DrawingToolType.trendLine:
         _currentDrawingTool = TrendLineTool(
           id: id,
-          startIndex: logicalIndex,  // 逻辑坐标
-          startPrice: logicalPrice,  // 逻辑坐标
+          startIndex: logicalIndex, // 逻辑坐标
+          startPrice: logicalPrice, // 逻辑坐标
           color: _currentColor,
           strokeWidth: _currentStrokeWidth,
         );
@@ -185,8 +188,8 @@ class DrawingToolManager {
       case DrawingToolType.trendAngle:
         _currentDrawingTool = TrendAngleTool(
           id: id,
-          startIndex: logicalIndex,  // 起点逻辑坐标
-          startPrice: logicalPrice,  // 起点价格
+          startIndex: logicalIndex, // 起点逻辑坐标
+          startPrice: logicalPrice, // 起点价格
           color: _currentColor,
           strokeWidth: _currentStrokeWidth,
         );
@@ -201,8 +204,8 @@ class DrawingToolManager {
       case DrawingToolType.arrow:
         _currentDrawingTool = ArrowTool(
           id: id,
-          startIndex: logicalIndex,  // 逻辑坐标
-          startPrice: logicalPrice,  // 逻辑坐标
+          startIndex: logicalIndex, // 逻辑坐标
+          startPrice: logicalPrice, // 逻辑坐标
           color: _currentColor,
           strokeWidth: _currentStrokeWidth,
         );
@@ -215,7 +218,7 @@ class DrawingToolManager {
       case DrawingToolType.verticalLine:
         _currentDrawingTool = VerticalLineTool(
           id: id,
-          lineIndex: logicalIndex,  // 逻辑坐标
+          lineIndex: logicalIndex, // 逻辑坐标
           color: _currentColor,
           strokeWidth: _currentStrokeWidth,
         );
@@ -226,7 +229,7 @@ class DrawingToolManager {
       case DrawingToolType.horizontalLine:
         _currentDrawingTool = HorizontalLineTool(
           id: id,
-          priceLevel: logicalPrice,  // 逻辑坐标
+          priceLevel: logicalPrice, // 逻辑坐标
           color: _currentColor,
           strokeWidth: _currentStrokeWidth,
         );
@@ -237,10 +240,10 @@ class DrawingToolManager {
       case DrawingToolType.horizontalRay:
         _currentDrawingTool = HorizontalRayTool(
           id: id,
-          startIndex: logicalIndex,  // 起点逻辑坐标
-          startPrice: logicalPrice,  // 起点价格
+          startIndex: logicalIndex, // 起点逻辑坐标
+          startPrice: logicalPrice, // 起点价格
           endIndex: logicalIndex! + 10, // 自动设置终点为起点右侧10个索引位置
-          endPrice: logicalPrice,        // 终点价格与起点相同（水平线）
+          endPrice: logicalPrice, // 终点价格与起点相同（水平线）
           color: _currentColor,
           strokeWidth: _currentStrokeWidth,
         );
@@ -251,8 +254,8 @@ class DrawingToolManager {
       case DrawingToolType.ray:
         _currentDrawingTool = RayTool(
           id: id,
-          startIndex: logicalIndex,  // 起点逻辑坐标
-          startPrice: logicalPrice,  // 起点价格
+          startIndex: logicalIndex, // 起点逻辑坐标
+          startPrice: logicalPrice, // 起点价格
           color: _currentColor,
           strokeWidth: _currentStrokeWidth,
         );
@@ -270,8 +273,8 @@ class DrawingToolManager {
       case DrawingToolType.crossLine:
         _currentDrawingTool = CrossLineTool(
           id: id,
-          centerIndex: logicalIndex,  // 中心点逻辑坐标
-          centerPrice: logicalPrice,  // 中心点价格
+          centerIndex: logicalIndex, // 中心点逻辑坐标
+          centerPrice: logicalPrice, // 中心点价格
           color: _currentColor,
           strokeWidth: _currentStrokeWidth,
         );
@@ -306,7 +309,8 @@ class DrawingToolManager {
     double Function(double)? getX,
     double Function(double)? getY,
     double Function(double)? getPriceFromY, // 新增：从Y坐标反推价格的函数
-    int Function(double)? calculateSelectedX, // 新增：屏幕X转索引的函数（直接使用BaseChartPainter的方法）
+    int Function(double)?
+        calculateSelectedX, // 新增：屏幕X转索引的函数（直接使用BaseChartPainter的方法）
     Rect? chartRect,
   }) {
     if (_currentDrawingTool == null) return;
@@ -339,8 +343,9 @@ class DrawingToolManager {
         int selectedIndex = calculateSelectedX(adjustedPoint.dx);
         logicalIndex = selectedIndex.toDouble();
         logicalPrice = getPriceFromY(adjustedPoint.dy);
-        debugPrint('updateDrawing坐标转换: 屏幕点($adjustedPoint) -> selectedIndex=$selectedIndex, 索引($logicalIndex), 价格($logicalPrice)');
-        
+        debugPrint(
+            'updateDrawing坐标转换: 屏幕点($adjustedPoint) -> selectedIndex=$selectedIndex, 索引($logicalIndex), 价格($logicalPrice)');
+
         // 验证数据有效性
         if (logicalIndex.isNaN || logicalIndex.isInfinite) {
           debugPrint('警告: updateDrawing logicalIndex无效: $logicalIndex');
@@ -356,23 +361,29 @@ class DrawingToolManager {
         logicalPrice = null;
       }
     } else {
-      debugPrint('updateDrawing坐标转换函数为null: calculateSelectedX=$calculateSelectedX, getPriceFromY=$getPriceFromY');
+      debugPrint(
+          'updateDrawing坐标转换函数为null: calculateSelectedX=$calculateSelectedX, getPriceFromY=$getPriceFromY');
     }
 
     switch (_currentDrawingTool!.type) {
       case DrawingToolType.trendLine:
         final tool = _currentDrawingTool as TrendLineTool;
-        tool.endIndex = logicalIndex;       // 设置逻辑坐标
-        tool.endPrice = logicalPrice;       // 设置逻辑坐标
-        debugPrint('TrendLineTool更新后数据: startIndex=${tool.startIndex}, startPrice=${tool.startPrice}, endIndex=${tool.endIndex}, endPrice=${tool.endPrice}, isComplete=${tool.isComplete}');
+        tool.endIndex = logicalIndex; // 设置逻辑坐标
+        tool.endPrice = logicalPrice; // 设置逻辑坐标
+        debugPrint(
+            'TrendLineTool更新后数据: startIndex=${tool.startIndex}, startPrice=${tool.startPrice}, endIndex=${tool.endIndex}, endPrice=${tool.endPrice}, isComplete=${tool.isComplete}');
         break;
       case DrawingToolType.trendAngle:
         final tool = _currentDrawingTool as TrendAngleTool;
-        debugPrint('TrendAngleTool updateDrawing: 屏幕坐标=$adjustedPoint, 逻辑坐标 logicalIndex=$logicalIndex, logicalPrice=$logicalPrice');
-        tool.endIndex = logicalIndex;       // 设置逻辑坐标
-        tool.endPrice = logicalPrice;       // 设置逻辑坐标
+        debugPrint(
+            'TrendAngleTool updateDrawing: 屏幕坐标=$adjustedPoint, 逻辑坐标 logicalIndex=$logicalIndex, logicalPrice=$logicalPrice');
+        tool.endIndex = logicalIndex; // 设置逻辑坐标
+        tool.endPrice = logicalPrice; // 设置逻辑坐标
         // 计算角度（基于逻辑坐标）
-        if (tool.startIndex != null && tool.startPrice != null && tool.endIndex != null && tool.endPrice != null) {
+        if (tool.startIndex != null &&
+            tool.startPrice != null &&
+            tool.endIndex != null &&
+            tool.endPrice != null) {
           final dx = tool.endIndex! - tool.startIndex!;
           final dy = tool.endPrice! - tool.startPrice!;
           tool.angle = (atan2(dy, dx) * 180 / pi).abs();
@@ -380,38 +391,46 @@ class DrawingToolManager {
         break;
       case DrawingToolType.arrow:
         final tool = _currentDrawingTool as ArrowTool;
-        tool.endIndex = logicalIndex;       // 设置逻辑坐标
-        tool.endPrice = logicalPrice;       // 设置逻辑坐标
-        debugPrint('ArrowTool更新后数据: startIndex=${tool.startIndex}, startPrice=${tool.startPrice}, endIndex=${tool.endIndex}, endPrice=${tool.endPrice}, isComplete=${tool.isComplete}');
+        tool.endIndex = logicalIndex; // 设置逻辑坐标
+        tool.endPrice = logicalPrice; // 设置逻辑坐标
+        debugPrint(
+            'ArrowTool更新后数据: startIndex=${tool.startIndex}, startPrice=${tool.startPrice}, endIndex=${tool.endIndex}, endPrice=${tool.endPrice}, isComplete=${tool.isComplete}');
         break;
       case DrawingToolType.verticalLine:
         final tool = _currentDrawingTool as VerticalLineTool;
-        debugPrint('VerticalLineTool updateDrawing: 屏幕坐标=$adjustedPoint, 逻辑坐标 logicalIndex=$logicalIndex');
-        tool.lineIndex = logicalIndex;  // 更新逻辑坐标
+        debugPrint(
+            'VerticalLineTool updateDrawing: 屏幕坐标=$adjustedPoint, 逻辑坐标 logicalIndex=$logicalIndex');
+        tool.lineIndex = logicalIndex; // 更新逻辑坐标
         break;
       case DrawingToolType.horizontalLine:
         final tool = _currentDrawingTool as HorizontalLineTool;
-        debugPrint('HorizontalLineTool updateDrawing: 屏幕坐标=$adjustedPoint, 逻辑坐标 logicalPrice=$logicalPrice');
-        tool.priceLevel = logicalPrice;  // 更新逻辑坐标
+        debugPrint(
+            'HorizontalLineTool updateDrawing: 屏幕坐标=$adjustedPoint, 逻辑坐标 logicalPrice=$logicalPrice');
+        tool.priceLevel = logicalPrice; // 更新逻辑坐标
         break;
       case DrawingToolType.horizontalRay:
         final tool = _currentDrawingTool as HorizontalRayTool;
-        debugPrint('HorizontalRayTool updateDrawing: 屏幕坐标=$adjustedPoint, 逻辑坐标 logicalIndex=$logicalIndex, logicalPrice=$logicalPrice');
+        debugPrint(
+            'HorizontalRayTool updateDrawing: 屏幕坐标=$adjustedPoint, 逻辑坐标 logicalIndex=$logicalIndex, logicalPrice=$logicalPrice');
         // 水平射线只需要起点位置，不需要更新终点
         break;
       case DrawingToolType.ray:
         final tool = _currentDrawingTool as RayTool;
-        debugPrint('RayTool updateDrawing: 屏幕坐标=$adjustedPoint, 逻辑坐标 logicalIndex=$logicalIndex, logicalPrice=$logicalPrice');
-        tool.directionIndex = logicalIndex;   // 设置方向点逻辑坐标
-        tool.directionPrice = logicalPrice;   // 设置方向点价格
-        debugPrint('RayTool更新后数据: startIndex=${tool.startIndex}, startPrice=${tool.startPrice}, directionIndex=${tool.directionIndex}, directionPrice=${tool.directionPrice}, isComplete=${tool.isComplete}');
+        debugPrint(
+            'RayTool updateDrawing: 屏幕坐标=$adjustedPoint, 逻辑坐标 logicalIndex=$logicalIndex, logicalPrice=$logicalPrice');
+        tool.directionIndex = logicalIndex; // 设置方向点逻辑坐标
+        tool.directionPrice = logicalPrice; // 设置方向点价格
+        debugPrint(
+            'RayTool更新后数据: startIndex=${tool.startIndex}, startPrice=${tool.startPrice}, directionIndex=${tool.directionIndex}, directionPrice=${tool.directionPrice}, isComplete=${tool.isComplete}');
         break;
       case DrawingToolType.crossLine:
         final tool = _currentDrawingTool as CrossLineTool;
-        debugPrint('CrossLineTool updateDrawing: 屏幕坐标=$adjustedPoint, 逻辑坐标 logicalIndex=$logicalIndex, logicalPrice=$logicalPrice');
-        tool.centerIndex = logicalIndex;  // 更新中心点逻辑坐标
-        tool.centerPrice = logicalPrice;  // 更新中心点价格
-        debugPrint('CrossLineTool更新后数据: centerIndex=${tool.centerIndex}, centerPrice=${tool.centerPrice}, isComplete=${tool.isComplete}');
+        debugPrint(
+            'CrossLineTool updateDrawing: 屏幕坐标=$adjustedPoint, 逻辑坐标 logicalIndex=$logicalIndex, logicalPrice=$logicalPrice');
+        tool.centerIndex = logicalIndex; // 更新中心点逻辑坐标
+        tool.centerPrice = logicalPrice; // 更新中心点价格
+        debugPrint(
+            'CrossLineTool更新后数据: centerIndex=${tool.centerIndex}, centerPrice=${tool.centerPrice}, isComplete=${tool.isComplete}');
         break;
     }
 
@@ -569,12 +588,14 @@ class DrawingToolManager {
     // 绘制已完成的工具
     for (int i = 0; i < _tools.length; i++) {
       final tool = _tools[i];
-      debugPrint('检查工具[$i]: type=${tool.type}, id=${tool.id}, isVisible=${tool.isVisible}, state=${tool.state}, isComplete=${tool.isComplete}');
-      
+      debugPrint(
+          '检查工具[$i]: type=${tool.type}, id=${tool.id}, isVisible=${tool.isVisible}, state=${tool.state}, isComplete=${tool.isComplete}');
+
       if (tool is TrendLineTool) {
-        debugPrint('TrendLineTool详情: startIndex=${tool.startIndex}, startPrice=${tool.startPrice}, endIndex=${tool.endIndex}, endPrice=${tool.endPrice}');
+        debugPrint(
+            'TrendLineTool详情: startIndex=${tool.startIndex}, startPrice=${tool.startPrice}, endIndex=${tool.endIndex}, endPrice=${tool.endPrice}');
       }
-      
+
       if (tool.isVisible) {
         debugPrint('开始绘制工具[$i]: ${tool.type}, id=${tool.id}');
         try {
@@ -599,7 +620,8 @@ class DrawingToolManager {
           '绘制当前工具: ${_currentDrawingTool!.type}, 完成状态=${_currentDrawingTool!.isComplete}, state=${_currentDrawingTool!.state}');
       if (_currentDrawingTool is TrendLineTool) {
         final tool = _currentDrawingTool as TrendLineTool;
-        debugPrint('当前TrendLineTool详情: startIndex=${tool.startIndex}, startPrice=${tool.startPrice}, endIndex=${tool.endIndex}, endPrice=${tool.endPrice}');
+        debugPrint(
+            '当前TrendLineTool详情: startIndex=${tool.startIndex}, startPrice=${tool.startPrice}, endIndex=${tool.endIndex}, endPrice=${tool.endPrice}');
       }
       try {
         _currentDrawingTool!.draw(canvas, size, scaleX, scrollX, getX, getY);
@@ -687,7 +709,7 @@ class DrawingToolManager {
       }
 
       _tools.add(tool);
-        }
+    }
 
     _notifyToolsChanged();
   }
@@ -735,6 +757,4 @@ class DrawingToolManager {
   String _generateId() {
     return 'tool_${DateTime.now().millisecondsSinceEpoch}_${_tools.length}';
   }
-
-
 }

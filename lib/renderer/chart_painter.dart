@@ -223,17 +223,18 @@ class ChartPainter extends BaseChartPainter {
       drawingToolManager!.drawTools(
         canvas,
         size,
-        scaleX,     // 传递当前的缩放比例
-        scrollX,    // 传递当前的滚动位置
+        scaleX, // 传递当前的缩放比例
+        scrollX, // 传递当前的滚动位置
         (index) {
           // 扩展的X坐标转换函数，支持超出数据范围的索引
           // 使用与getX相同的计算逻辑，但不限制索引范围
           final absoluteX = index * mPointWidth + mPointWidth / 2;
           final screenX = translateXtoX(absoluteX);
-          debugPrint('扩展坐标转换: index=$index -> absoluteX=$absoluteX -> screenX=$screenX (支持空白区域)');
+          debugPrint(
+              '扩展坐标转换: index=$index -> absoluteX=$absoluteX -> screenX=$screenX (支持空白区域)');
           return screenX;
         },
-        getMainY,   // 传递正确的Y坐标转换函数（价格转屏幕坐标）
+        getMainY, // 传递正确的Y坐标转换函数（价格转屏幕坐标）
       );
     }
   }
