@@ -1,3 +1,6 @@
+## 2.8.0
+* Improved: style
+
 ## 2.7.0
 * Improved: scaleSensitivity
 

@@ -185,7 +185,7 @@ class ChartColors {
     colors.depthBuyColor = Color(0xff129A48);
     colors.depthSellColor = Color(0xffEA4747);
 
-    colors.selectBorderColor = Color(0xffF8F8F8);
+    colors.selectBorderColor = Color(0xff6C7A86);
     colors.selectFillColor = Color(0xffF8F8F8);
 
     colors.gridColor = Color(0xffE0E0E0);

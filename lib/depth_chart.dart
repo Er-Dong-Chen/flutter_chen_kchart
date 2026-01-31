@@ -348,10 +348,12 @@ class DepthChartPainter extends CustomPainter {
     } else {
       left = dx - priceTP.width / 2;
     }
-    Rect bottomRect = Rect.fromLTRB(left - 3, mDrawHeight + 3,
+    Rect bottomRect = Rect.fromLTRB(left - 3, mDrawHeight,
         left + priceTP.width + 3, mDrawHeight + mPaddingBottom);
-    canvas.drawRect(bottomRect, selectPaint!);
-    canvas.drawRect(bottomRect, selectBorderPaint!);
+    final bottomRRect =
+        RRect.fromRectAndRadius(bottomRect, Radius.circular(4));
+    canvas.drawRRect(bottomRRect, selectPaint!);
+    canvas.drawRRect(bottomRRect, selectBorderPaint!);
     priceTP.paint(
         canvas,
         Offset(bottomRect.left + (bottomRect.width - priceTP.width) / 2,
@@ -371,8 +373,10 @@ class DepthChartPainter extends CustomPainter {
     }
     Rect rightRect = Rect.fromLTRB(mWidth - amountTP.width - 6,
         rightRectTop - 3, mWidth, rightRectTop + amountTP.height + 3);
-    canvas.drawRect(rightRect, selectPaint!);
-    canvas.drawRect(rightRect, selectBorderPaint!);
+    final rightRRect =
+        RRect.fromRectAndRadius(rightRect, Radius.circular(4));
+    canvas.drawRRect(rightRRect, selectPaint!);
+    canvas.drawRRect(rightRRect, selectBorderPaint!);
     amountTP.paint(
         canvas,
         Offset(rightRect.left + (rightRect.width - amountTP.width) / 2,

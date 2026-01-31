@@ -1639,7 +1639,7 @@ class _KChartWidgetState extends State<KChartWidget>
           ];
 
           final dialogPadding = 12.0;
-          final dialogWidth = 164.0;
+          final dialogWidth = 150.0;
           final bgColor =
               currentChartColors.selectFillColor.withValues(alpha: 0.94);
           final borderColor = currentChartColors.selectBorderColor;
@@ -1664,14 +1664,13 @@ class _KChartWidgetState extends State<KChartWidget>
                 ],
               ),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                  color: borderColor.withValues(alpha: 0.7), width: 1.0),
+              // border: Border.all(
+              //     color: borderColor.withValues(alpha: 0.7), width: 1.0),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.28),
-                  blurRadius: 12,
-                  offset: Offset(0, 6),
-                ),
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 12,
+                    offset: Offset(0, 6))
               ],
             ),
             child: Column(
@@ -1707,17 +1706,17 @@ class _KChartWidgetState extends State<KChartWidget>
                   final item = entry.value;
                   final isLast = index == rows.length - 1;
                   return Container(
-                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                    decoration: BoxDecoration(
-                      border: isLast
-                          ? null
-                          : Border(
-                              bottom: BorderSide(
-                                color: borderColor.withValues(alpha: 0.28),
-                                width: 0.5,
-                              ),
-                            ),
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    // decoration: BoxDecoration(
+                    //   border: isLast
+                    //       ? null
+                    //       : Border(
+                    //           bottom: BorderSide(
+                    //             color: borderColor.withValues(alpha: 0.28),
+                    //             width: 0.5,
+                    //           ),
+                    //         ),
+                    // ),
                     child: Row(
                       children: <Widget>[
                         Expanded(
@@ -1759,28 +1758,6 @@ class _KChartWidgetState extends State<KChartWidget>
     if (value.startsWith("+")) return currentChartColors.upColor;
     if (value.startsWith("-")) return currentChartColors.dnColor;
     return currentChartColors.infoWindowNormalColor;
-  }
-
-  Widget _buildItem(String info, String infoName) {
-    Color color = currentChartColors.infoWindowNormalColor;
-    if (info.startsWith("+"))
-      color = currentChartColors.infoWindowUpColor;
-    else if (info.startsWith("-")) color = currentChartColors.infoWindowDnColor;
-    final infoWidget = Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: <Widget>[
-        Expanded(
-            child: Text("$infoName",
-                style: TextStyle(
-                    color: currentChartColors.infoWindowTitleColor,
-                    fontSize: 10.0))),
-        Text(info, style: TextStyle(color: color, fontSize: 10.0)),
-      ],
-    );
-    return widget.materialInfoDialog
-        ? Material(color: Colors.transparent, child: infoWidget)
-        : infoWidget;
   }
 
   String getDate(int? date) {

@@ -1,4 +1,5 @@
 import 'dart:async' show StreamSink;
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_chen_kchart/utils/number_util.dart';
@@ -12,7 +13,6 @@ import 'base_chart_renderer.dart';
 import 'main_renderer.dart';
 import 'secondary_renderer.dart';
 import 'vol_renderer.dart';
-import 'dart:math' as math;
 
 class TrendLine {
   final Offset p1;
@@ -252,27 +252,76 @@ class ChartPainter extends BaseChartPainter {
   @override
   void drawDate(Canvas canvas, Size size) {
     if (datas == null) return;
+    if (mGridColumns <= 0) return;
 
     double columnSpace = size.width / mGridColumns;
     double startX = getX(mStartIndex) - mPointWidth / 2;
     double stopX = getX(mStopIndex) + mPointWidth / 2;
-    double x = 0.0;
-    double y = 0.0;
-    for (var i = 0; i <= mGridColumns; ++i) {
-      double translateX = xToTranslateX(columnSpace * i);
+    const minGap = 8.0;
 
-      if (translateX >= startX && translateX <= stopX) {
-        int index = indexOfTranslateX(translateX);
+    Map<String, Object>? buildLabel(int i) {
+      final translateX = xToTranslateX(columnSpace * i);
+      if (translateX < startX || translateX > stopX) return null;
+      final index = indexOfTranslateX(translateX);
+      if (datas?[index] == null) return null;
+      final tp = getTextPainter(getDate(datas![index].time), null);
+      final y = size.height - (mBottomPadding - tp.height) / 2 - tp.height;
+      var x = columnSpace * i - tp.width / 2;
+      if (x < 0) x = 0;
+      if (x > size.width - tp.width) x = size.width - tp.width;
+      return {'x': x, 'y': y, 'tp': tp};
+    }
 
-        if (datas?[index] == null) continue;
-        TextPainter tp = getTextPainter(getDate(datas![index].time), null);
-        y = size.height - (mBottomPadding - tp.height) / 2 - tp.height;
-        x = columnSpace * i - tp.width / 2;
-        // Prevent date text out of canvas
-        if (x < 0) x = 0;
-        if (x > size.width - tp.width) x = size.width - tp.width;
-        tp.paint(canvas, Offset(x, y));
+    final first = buildLabel(0);
+    final last = buildLabel(mGridColumns);
+
+    if (first == null && last == null) return;
+
+    if (first != null && last != null) {
+      final firstX = first['x'] as double;
+      final firstTp = first['tp'] as TextPainter;
+      final lastX = last['x'] as double;
+      if (firstX + firstTp.width + minGap > lastX) {
+        final lastTp = last['tp'] as TextPainter;
+        final lastY = last['y'] as double;
+        lastTp.paint(canvas, Offset(lastX, lastY));
+        return;
       }
+    }
+
+    double lastRight = -1e9;
+    double reservedLeft = double.infinity;
+
+    if (last != null) {
+      reservedLeft = (last['x'] as double) - minGap;
+    }
+
+    if (first != null) {
+      final x = first['x'] as double;
+      final y = first['y'] as double;
+      final tp = first['tp'] as TextPainter;
+      tp.paint(canvas, Offset(x, y));
+      lastRight = x + tp.width;
+    }
+
+    for (var i = 1; i <= mGridColumns - 1; ++i) {
+      final label = buildLabel(i);
+      if (label == null) continue;
+      final x = label['x'] as double;
+      final tp = label['tp'] as TextPainter;
+      final right = x + tp.width;
+      if (x <= lastRight + minGap) continue;
+      if (right >= reservedLeft) continue;
+      final y = label['y'] as double;
+      tp.paint(canvas, Offset(x, y));
+      lastRight = right;
+    }
+
+    if (last != null) {
+      final x = last['x'] as double;
+      final y = last['y'] as double;
+      final tp = last['tp'] as TextPainter;
+      tp.paint(canvas, Offset(x, y));
     }
 
 //    double translateX = xToTranslateX(0);
