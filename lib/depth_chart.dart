@@ -156,8 +156,15 @@ class DepthChartPainter extends CustomPainter {
     mWidth = size.width;
     mDrawWidth = mWidth / 2;
     mDrawHeight = size.height - mPaddingBottom;
-    // canvas.drawColor(Colors.green, BlendMode.srcATop);
     canvas.save();
+    final bgRect = Rect.fromLTWH(0, 0, size.width, size.height);
+    final bgPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: chartColors.bgColor,
+      ).createShader(bgRect);
+    canvas.drawRect(bgRect, bgPaint);
     //绘制买入区域
     drawBuy(canvas);
     //绘制卖出区域
@@ -399,9 +406,11 @@ class DepthChartPainter extends CustomPainter {
 
   double getSellX(int position) => position * mSellPointWidth! + mDrawWidth;
 
-  getTextPainter(String text, [Color color = Colors.white]) => TextPainter(
-      text:
-          TextSpan(text: "$text", style: TextStyle(color: color, fontSize: 10)),
+  TextPainter getTextPainter(String text, [Color? color]) => TextPainter(
+      text: TextSpan(
+          text: "$text",
+          style: TextStyle(
+              color: color ?? chartColors.defaultTextColor, fontSize: 10)),
       textDirection: TextDirection.ltr);
 
   double getBottomTextY(double textHeight) =>

@@ -617,7 +617,7 @@ class DrawingToolManager {
     if (bounds.isEmpty) return;
 
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.8)
+      ..color = Colors.white.withValues(alpha: 0.8)
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
 

@@ -396,17 +396,23 @@ class ChartPainter extends BaseChartPainter {
       dateX = mWidth - 1 - dateWidth / 2 - w1;
     }
 
-    double baseLine = textHeight / 2;
-    canvas.drawRect(
-        Rect.fromLTRB(dateX - dateWidth / 2 - w1, dateY,
-            dateX + dateWidth / 2 + w1, dateY + baseLine + r / 2),
-        selectPointPaint);
-    canvas.drawRect(
-        Rect.fromLTRB(dateX - dateWidth / 2 - w1, dateY,
-            dateX + dateWidth / 2 + w1, dateY + baseLine + r / 2),
-        selectorBorderPaint);
+    final labelPaddingX = 8.0;
+    final labelPaddingY = 4.0;
+    final labelHeight = dateTp.height + labelPaddingY * 2;
+    final labelTop =
+        dateY + (mBottomPadding - labelHeight).clamp(0.0, mBottomPadding) / 2;
+    final labelRect = Rect.fromLTRB(
+      dateX - dateWidth / 2 - labelPaddingX,
+      labelTop,
+      dateX + dateWidth / 2 + labelPaddingX,
+      labelTop + labelHeight,
+    );
+    final labelRRect = RRect.fromRectAndRadius(labelRect, Radius.circular(4));
+    canvas.drawRRect(labelRRect, selectPointPaint);
+    canvas.drawRRect(labelRRect, selectorBorderPaint);
 
-    dateTp.paint(canvas, Offset(dateX - dateWidth / 2, dateY));
+    dateTp.paint(
+        canvas, Offset(dateX - dateWidth / 2, labelTop + labelPaddingY));
 
     //长按显示这条数据详情
     sink?.add(InfoWindowEntity(point, isLeft: isLeft));

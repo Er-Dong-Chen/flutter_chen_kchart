@@ -71,7 +71,7 @@ class MainRenderer extends BaseChartRenderer<CandleEntity> {
   void drawText(Canvas canvas, CandleEntity data, double x) {
     if (isLine == true) return;
     TextSpan? span;
-    if (state == MainState.MA) {
+    if (state == MainState.MA || state == MainState.EMA) {
       span = TextSpan(
         children: _createMATextSpan(data),
       );
@@ -119,7 +119,7 @@ class MainRenderer extends BaseChartRenderer<CandleEntity> {
       drawPolyline(lastPoint.close, curPoint.close, canvas, lastX, curX);
     } else {
       drawCandle(curPoint, canvas, curX);
-      if (state == MainState.MA) {
+      if (state == MainState.MA || state == MainState.EMA) {
         drawMaLine(lastPoint, curPoint, canvas, lastX, curX);
       } else if (state == MainState.BOLL) {
         drawBollLine(lastPoint, curPoint, canvas, lastX, curX);

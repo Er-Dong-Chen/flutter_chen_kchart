@@ -142,7 +142,7 @@ class DrawingCrosshairPainter extends CustomPainter {
             Shadow(
               offset: Offset(1, 1),
               blurRadius: 2,
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withValues(alpha: 0.5),
             ),
           ],
         ),
@@ -173,7 +173,7 @@ class DrawingCrosshairPainter extends CustomPainter {
     );
 
     final bgPaint = Paint()
-      ..color = Colors.black.withOpacity(0.7)
+      ..color = Colors.black.withValues(alpha: 0.7)
       ..style = PaintingStyle.fill;
 
     canvas.drawRRect(

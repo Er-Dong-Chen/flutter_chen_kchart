@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // 添加：用于震动反馈
 import 'package:flutter_chen_kchart/k_chart.dart';
 
-enum MainState { MA, BOLL, NONE }
+enum MainState { MA, EMA, BOLL, NONE }
 
 enum SecondaryState { MACD, KDJ, RSI, WR, CCI, NONE }
 
@@ -251,9 +251,8 @@ class _KChartWidgetState extends State<KChartWidget>
   late DrawingToolManager _drawingToolManager;
 
   // 优化的缩放功能变量
-  double _lastScale = 1.0;
+  double _pinchStartScale = 1.0;
   bool isScale = false, isDrag = false, isLongPress = false, isOnTap = false;
-  Offset? _scaleCenter; // 缩放中心点
   AnimationController? _scaleAnimationController;
   late double _currentScale;
 
@@ -277,9 +276,6 @@ class _KChartWidgetState extends State<KChartWidget>
 
   // 新增：图表绘制器实例
   ChartPainter? _painter;
-
-  // 新增：拖拽状态跟踪
-  Offset? _lastFocalPoint; // 上次触摸焦点位置
 
   // 新增：绘图工具移动跟踪
   Offset? _drawingStartPosition; // 绘图开始位置
@@ -307,6 +303,16 @@ class _KChartWidgetState extends State<KChartWidget>
 
   double getMinScrollX() {
     return mScaleX;
+  }
+
+  double _maxScrollXForScale(double scaleX) {
+    if (scaleX <= 0 || mWidth <= 0) return 0.0;
+    final dataLen = (widget.datas?.length ?? 0) * currentChartStyle.pointWidth;
+    final minTranslateX = -dataLen +
+        mWidth / scaleX -
+        currentChartStyle.pointWidth / 2 -
+        widget.xFrontPadding;
+    return minTranslateX >= 0 ? 0.0 : minTranslateX.abs();
   }
 
   // 获取当前绘图模式状态
@@ -398,8 +404,6 @@ class _KChartWidgetState extends State<KChartWidget>
 
     try {
       if (widget.enableScaleAnimation && duration != null) {
-        _scaleCenter = center;
-
         final animationController = AnimationController(
           duration: duration,
           vsync: this,
@@ -478,9 +482,10 @@ class _KChartWidgetState extends State<KChartWidget>
         oldScale != mScaleX) {
       // 计算内容坐标下的焦点
       final contentX = mScrollX + center.dx / oldScale;
+      final currentMaxScrollX = _maxScrollXForScale(mScaleX);
       // 缩放后，调整mScrollX让焦点保持在原地
       mScrollX = (contentX - center.dx / mScaleX)
-          .clamp(0.0, ChartPainter.maxScrollX)
+          .clamp(0.0, currentMaxScrollX)
           .toDouble();
     }
 
@@ -544,9 +549,7 @@ class _KChartWidgetState extends State<KChartWidget>
         Timer(Duration(milliseconds: _crossLineHideDelay), () {
       if (mounted) {
         setState(() {
-          _shouldShowCrossLine = false;
-          isLongPress = false;
-          isOnTap = false;
+          _hideCrossLine();
         });
       }
     });
@@ -569,6 +572,15 @@ class _KChartWidgetState extends State<KChartWidget>
     _cancelCrossLineHideTimer();
     isLongPress = false;
     isOnTap = false;
+    mInfoWindowStream?.sink.add(null);
+    _currentSelectedIndex = -1;
+  }
+
+  double _snapCrosshairToCandleCenterX(double rawScreenX) {
+    if (_painter == null) return rawScreenX;
+    final index = _painter!.calculateSelectedX(rawScreenX);
+    final centerTranslateX = _painter!.getX(index);
+    return _painter!.translateXtoX(centerTranslateX);
   }
 
   // 新增：震动反馈辅助方法
@@ -1005,6 +1017,9 @@ class _KChartWidgetState extends State<KChartWidget>
                         : 1.0 / widget.scrollZoomFactor;
                     final newScale = _currentScale * zoomFactor;
 
+                    if (_shouldShowCrossLine) {
+                      _hideCrossLine();
+                    }
                     _updateScale(newScale, details.position);
                   }
                 }
@@ -1249,11 +1264,11 @@ class _KChartWidgetState extends State<KChartWidget>
                   // 只有在开启单点显示信息对话框且不在十字线模式时才设置isOnTap
                   if (!_shouldShowCrossLine) {
                     isOnTap = true;
-                    if (mSelectX != details.localPosition.dx &&
-                        widget.isTapShowInfoDialog) {
-                      mSelectX = details.localPosition.dx;
-                      notifyChanged();
+                    if (widget.isTapShowInfoDialog) {
+                      mSelectX =
+                          _snapCrosshairToCandleCenterX(details.localPosition.dx);
                     }
+                    notifyChanged();
                   }
                 }
                 if (widget.isTrendLine && !isLongPress && enableCordRecord) {
@@ -1275,36 +1290,7 @@ class _KChartWidgetState extends State<KChartWidget>
                   notifyChanged();
                 }
               },
-              onHorizontalDragDown: (details) {
-                // 绘图模式下不处理水平拖拽
-                if (widget.enableDrawingTools && _isDrawingMode) return;
-
-                isOnTap = false;
-                _stopAnimation();
-                _onDragChanged(true);
-              },
-              onHorizontalDragUpdate: (details) {
-                // 绘图模式下不处理水平拖拽
-                if (widget.enableDrawingTools && _isDrawingMode) return;
-
-                if (isScale || isLongPress) return;
-
-                mScrollX = (mScrollX + (details.primaryDelta ?? 0) / mScaleX)
-                    .clamp(0.0, ChartPainter.maxScrollX)
-                    .toDouble();
-                notifyChanged();
-              },
-              onHorizontalDragEnd: (DragEndDetails details) {
-                // 绘图模式下不处理水平拖拽
-                if (widget.enableDrawingTools && _isDrawingMode) return;
-
-                var velocity = details.velocity.pixelsPerSecond.dx;
-                _onFling(velocity);
-              },
-              onHorizontalDragCancel: () => _onDragChanged(false),
               onScaleStart: (details) {
-                if (!widget.enablePinchZoom) return;
-
                 // 如果正在长按，则不启动缩放
                 if (isLongPress) {
                   return;
@@ -1320,34 +1306,30 @@ class _KChartWidgetState extends State<KChartWidget>
                   // 绘图模式下，处理绘图开始事件
                   if (details.pointerCount == 1) {
                     // 修复：使用localFocalPoint确保坐标系统一致
-                    final localPoint =
-                        details.localFocalPoint ?? details.focalPoint;
+                    final localPoint = details.localFocalPoint;
                     _handleDrawingPanStart(localPoint);
                     return;
                   }
                 }
 
-                // 移动端：只有多指触摸才启动缩放
-                if (details.pointerCount < 2) {
-                  // 单指的情况，如果不是绘图模式，则启动拖拽
-                  if (!widget.enableDrawingTools || !_isDrawingMode) {
-                    isOnTap = false;
-                    _stopAnimation();
-                    _onDragChanged(true);
-                    _lastFocalPoint = details.focalPoint; // 记录初始触摸点
-                  }
-                  return;
+                isOnTap = false;
+                if (_shouldShowCrossLine) {
+                  _hideCrossLine();
                 }
 
-                isScale = true;
-                _lastScale = mScaleX;
-                _scaleCenter = details.focalPoint;
-                _triggerScaleHaptic(); // 添加：缩放开始震动
-                // 缩放开始时不隐藏十字线
+                _stopAnimation();
+                if (details.pointerCount >= 2) {
+                  if (!widget.enablePinchZoom) return;
+                  _onDragChanged(false);
+                  isScale = true;
+                  _pinchStartScale = mScaleX;
+                  _triggerScaleHaptic();
+                } else {
+                  isScale = false;
+                  _onDragChanged(true);
+                }
               },
               onScaleUpdate: (details) {
-                if (!widget.enablePinchZoom) return;
-
                 // 如果正在长按，则不执行缩放
                 if (isLongPress) {
                   return;
@@ -1363,59 +1345,48 @@ class _KChartWidgetState extends State<KChartWidget>
                   if (details.pointerCount == 1) {
                     // 单指移动：处理绘图更新
                     // 修复：使用localFocalPoint确保坐标系统一致
-                    final localPoint =
-                        details.localFocalPoint ?? details.focalPoint;
+                    final localPoint = details.localFocalPoint;
                     _handleDrawingPanUpdate(localPoint);
                     return;
                   }
                 }
 
-                // 移动端：多指缩放处理
+                if (_shouldShowCrossLine) {
+                  _hideCrossLine();
+                }
+
                 if (details.pointerCount >= 2) {
-                  if (isLongPress && !isScale) return;
-                  // 基于累积增量的缩放算法 - 类似拖拽的增量处理
-                  double scaleDelta = details.scale - 1.0;
-                  double sensitivity = widget.scaleSensitivity;
-                  double accumulatedDelta = scaleDelta * sensitivity;
+                  if (!widget.enablePinchZoom) return;
+                  isScale = true;
+
+                  final sensitivity = widget.scaleSensitivity;
+                  final scaleDelta = details.scale - 1.0;
+                  final accumulatedDelta = scaleDelta * sensitivity;
+
                   double factor;
                   if (accumulatedDelta >= 0) {
-                    factor = 1.0 + (accumulatedDelta * 1.5);
+                    factor = 1.0 + (accumulatedDelta * 2.8);
                   } else {
-                    factor = 1.0 + (accumulatedDelta * 2.0);
+                    factor = 1.0 + (accumulatedDelta * 3.6);
                   }
-                  double targetScale = _lastScale * factor;
-                  if (_isAtMaxScale && accumulatedDelta < 0) {
-                    factor = 1.0 + (accumulatedDelta * 3.0);
-                    targetScale = _lastScale * factor;
-                  }
-                  if (_isAtMinScale && accumulatedDelta > 0) {
-                    factor = 1.0 + (accumulatedDelta * 3.0);
-                    targetScale = _lastScale * factor;
-                  }
-                  _updateScale(targetScale,
-                      widget.enableScaleCenterPoint ? _scaleCenter : null);
-                  // 缩放过程中不隐藏十字线
-                } else {
-                  // 单指拖拽处理（非绘图模式）
-                  if (!widget.enableDrawingTools || !_isDrawingMode) {
-                    if (isScale || isLongPress) return;
 
-                    // 计算拖拽的偏移量
-                    if (_lastFocalPoint != null) {
-                      double deltaX =
-                          details.focalPoint.dx - _lastFocalPoint!.dx;
-                      mScrollX = (mScrollX + deltaX / mScaleX)
-                          .clamp(0.0, ChartPainter.maxScrollX)
-                          .toDouble();
-                      notifyChanged();
-                    }
-                    _lastFocalPoint = details.focalPoint;
-                  }
+                  if (factor.isNaN || factor.isInfinite || factor <= 0) return;
+
+                  final targetScale = _pinchStartScale * factor;
+                  final currentFocalPoint = details.localFocalPoint;
+                  _updateScale(targetScale,
+                      widget.enableScaleCenterPoint ? currentFocalPoint : null);
+                  return;
                 }
+
+                if (isScale) return;
+                final maxScrollX = _maxScrollXForScale(mScaleX);
+                mScrollX = (mScrollX + details.focalPointDelta.dx / mScaleX)
+                    .clamp(0.0, maxScrollX)
+                    .toDouble();
+                notifyChanged();
               },
               onScaleEnd: (details) {
-                if (!widget.enablePinchZoom) return;
-
                 // 如果正在长按，则不结束缩放
                 if (isLongPress) {
                   return;
@@ -1432,21 +1403,15 @@ class _KChartWidgetState extends State<KChartWidget>
                   return;
                 }
 
-                // 非绘图模式下的处理
-                if (details.pointerCount < 2) {
-                  // 单指结束：处理惯性滑动
-                  if (!isScale) {
-                    var velocity = details.velocity.pixelsPerSecond.dx;
-                    _onFling(velocity);
-                    _onDragChanged(false);
-                  }
-                  _lastFocalPoint = null; // 重置触摸点
-                } else {
-                  // 多指结束：结束缩放
+                if (isScale) {
                   isScale = false;
-                  _lastScale = mScaleX;
-                  _scaleCenter = null;
+                  _pinchStartScale = mScaleX;
+                  return;
                 }
+
+                final velocity = details.velocity.pixelsPerSecond.dx;
+                _onFling(velocity);
+                _onDragChanged(false);
               },
               onLongPressStart: (details) {
                 isOnTap = false;
@@ -1460,12 +1425,15 @@ class _KChartWidgetState extends State<KChartWidget>
                       _painter!.calculateSelectedX(details.localPosition.dx);
                 }
 
-                if ((mSelectX != details.localPosition.dx ||
+                if ((mSelectX !=
+                            _snapCrosshairToCandleCenterX(
+                                details.localPosition.dx) ||
                         mSelectY !=
                             details.localPosition
                                 .dy) && // 修改：使用localPosition.dy而不是globalPosition.dy
                     !widget.isTrendLine) {
-                  mSelectX = details.localPosition.dx;
+                  mSelectX =
+                      _snapCrosshairToCandleCenterX(details.localPosition.dx);
                   mSelectY = details.localPosition.dy; // 添加：保存本地Y坐标
                   notifyChanged();
                 }
@@ -1484,7 +1452,9 @@ class _KChartWidgetState extends State<KChartWidget>
               },
               onLongPressMoveUpdate: (details) {
                 _showCrossLine(); // 移动时继续显示十字线并取消延迟隐藏
-                if ((mSelectX != details.localPosition.dx ||
+                if ((mSelectX !=
+                            _snapCrosshairToCandleCenterX(
+                                details.localPosition.dx) ||
                         mSelectY !=
                             details.localPosition
                                 .dy) && // 修改：使用localPosition.dy而不是globalPosition.dy
@@ -1500,7 +1470,8 @@ class _KChartWidgetState extends State<KChartWidget>
                     _currentSelectedIndex = newSelectedIndex;
                   }
 
-                  mSelectX = details.localPosition.dx;
+                  mSelectX =
+                      _snapCrosshairToCandleCenterX(details.localPosition.dx);
                   mSelectY = details.localPosition.dy; // 修改：使用本地Y坐标
                   notifyChanged();
                 }
@@ -1517,7 +1488,6 @@ class _KChartWidgetState extends State<KChartWidget>
               onLongPressEnd: (details) {
                 isLongPress = false;
                 enableCordRecord = true;
-                mInfoWindowStream?.sink.add(null);
                 _startCrossLineHideTimer(); // 开始延迟隐藏十字线
                 _currentSelectedIndex = -1; // 重置选中索引
                 notifyChanged();
@@ -1570,7 +1540,7 @@ class _KChartWidgetState extends State<KChartWidget>
 
   void _onFling(double velocity) {
     double target = mScrollX + velocity * widget.flingRatio / mScaleX;
-    target = target.clamp(0.0, ChartPainter.maxScrollX).toDouble();
+    target = target.clamp(0.0, _maxScrollXForScale(mScaleX)).toDouble();
 
     _controller = AnimationController(
       duration: Duration(milliseconds: widget.flingTime),
@@ -1602,56 +1572,164 @@ class _KChartWidgetState extends State<KChartWidget>
     return StreamBuilder<InfoWindowEntity?>(
         stream: mInfoWindowStream?.stream,
         builder: (context, snapshot) {
-          if ((!isLongPress && !isOnTap) ||
+          if ((!_shouldShowCrossLine &&
+                  !(widget.isTapShowInfoDialog && isOnTap)) ||
               widget.isLine == true ||
-              !snapshot.hasData ||
-              snapshot.data?.kLineEntity == null) return Container();
-          KLineEntity entity = snapshot.data!.kLineEntity;
+              snapshot.data == null ||
+              snapshot.data?.kLineEntity == null) {
+            return Container();
+          }
+
+          final entity = snapshot.data!.kLineEntity;
           double upDown = entity.change ?? entity.close - entity.open;
           double upDownPercent = entity.ratio ?? (upDown / entity.open) * 100;
-          final double? entityAmount = entity.amount;
-          infos = [
-            getDate(entity.time),
-            entity.open.toStringAsFixed(widget.fixedLength),
-            entity.high.toStringAsFixed(widget.fixedLength),
-            entity.low.toStringAsFixed(widget.fixedLength),
-            entity.close.toStringAsFixed(widget.fixedLength),
-            "${upDown > 0 ? "+" : ""}${upDown.toStringAsFixed(widget.fixedLength)}",
-            "${upDownPercent > 0 ? "+" : ''}${upDownPercent.toStringAsFixed(2)}%",
-            if (entityAmount != null) entityAmount.toInt().toString()
+
+          final translations = widget.isChinese
+              ? kChartTranslations['zh_CN']!
+              : widget.translations.of(context);
+
+          final dateText = getDate(entity.time);
+          final rows = <MapEntry<String, String>>[
+            MapEntry(translations.open,
+                entity.open.toStringAsFixed(widget.fixedLength)),
+            MapEntry(translations.high,
+                entity.high.toStringAsFixed(widget.fixedLength)),
+            MapEntry(
+                translations.low, entity.low.toStringAsFixed(widget.fixedLength)),
+            MapEntry(translations.close,
+                entity.close.toStringAsFixed(widget.fixedLength)),
+            MapEntry(
+                translations.changeAmount,
+                "${upDown > 0 ? "+" : ""}${upDown.toStringAsFixed(widget.fixedLength)}"),
+            MapEntry(
+                translations.change,
+                "${upDownPercent > 0 ? "+" : ''}${upDownPercent.toStringAsFixed(2)}%"),
+            if (entity.amount != null)
+              MapEntry(translations.amount, entity.amount!.toInt().toString()),
           ];
-          final dialogPadding = 4.0;
-          final dialogWidth = mWidth / 3;
+
+          final dialogPadding = 12.0;
+          final dialogWidth = 164.0;
+          final bgColor =
+              currentChartColors.selectFillColor.withValues(alpha: 0.94);
+          final borderColor = currentChartColors.selectBorderColor;
+          final titleColor = currentChartColors.infoWindowTitleColor;
+          final valueColor = currentChartColors.infoWindowNormalColor;
+
           return Container(
             margin: EdgeInsets.only(
-                left: snapshot.data!.isLeft
-                    ? dialogPadding
-                    : mWidth - dialogWidth - dialogPadding,
-                top: 25),
+              left: snapshot.data!.isLeft
+                  ? dialogPadding
+                  : mWidth - dialogWidth - dialogPadding,
+              top: 40,
+            ),
             width: dialogWidth,
             decoration: BoxDecoration(
-                color:
-                    currentChartColors.selectFillColor.withValues(alpha: 0.9),
-                border: Border.all(
-                    color: currentChartColors.selectBorderColor, width: 0.5)),
-            child: ListView.builder(
-              padding: EdgeInsets.all(dialogPadding),
-              itemCount: infos.length,
-              itemExtent: 14.0,
-              shrinkWrap: true,
-              itemBuilder: (context, index) {
-                final translations = widget.isChinese
-                    ? kChartTranslations['zh_CN']!
-                    : widget.translations.of(context);
-
-                return _buildItem(
-                  infos[index],
-                  translations.byIndex(index),
-                );
-              },
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  bgColor,
+                  bgColor.withValues(alpha: 0.90),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(8),
+              border:
+                  Border.all(color: borderColor.withValues(alpha: 0.7), width: 1.0),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.28),
+                  blurRadius: 12,
+                  offset: Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: borderColor.withValues(alpha: 0.10),
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(8)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          dateText,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: valueColor,
+                            fontSize: 11.0,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ...rows.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final item = entry.value;
+                  final isLast = index == rows.length - 1;
+                  return Container(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      border: isLast
+                          ? null
+                          : Border(
+                              bottom: BorderSide(
+                                color: borderColor.withValues(alpha: 0.28),
+                                width: 0.5,
+                              ),
+                            ),
+                    ),
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            item.key,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: titleColor,
+                              fontSize: 11.0,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          item.value,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: _getInfoValueColor(item.value),
+                            fontSize: 11.0,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: 'monospace',
+                            letterSpacing: -0.1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ],
             ),
           );
         });
+  }
+
+  Color _getInfoValueColor(String value) {
+    if (value.startsWith("+")) return currentChartColors.upColor;
+    if (value.startsWith("-")) return currentChartColors.dnColor;
+    return currentChartColors.infoWindowNormalColor;
   }
 
   Widget _buildItem(String info, String infoName) {

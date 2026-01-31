@@ -262,6 +262,7 @@ class ChartStyle {
   double topPadding = 30.0;
   double bottomPadding = 20.0;
   double childPadding = 12.0;
+  double rightPadding = 0.0;
 
   //点与点的距离
   double pointWidth = 11.0;
@@ -304,6 +305,7 @@ class ChartStyle {
     double? topPadding,
     double? bottomPadding,
     double? childPadding,
+    double? rightPadding,
     double? pointWidth,
     double? candleWidth,
     double? candleLineWidth,
@@ -323,6 +325,7 @@ class ChartStyle {
     newStyle.topPadding = topPadding ?? this.topPadding;
     newStyle.bottomPadding = bottomPadding ?? this.bottomPadding;
     newStyle.childPadding = childPadding ?? this.childPadding;
+    newStyle.rightPadding = rightPadding ?? this.rightPadding;
     newStyle.pointWidth = pointWidth ?? this.pointWidth;
     newStyle.candleWidth = candleWidth ?? this.candleWidth;
     newStyle.candleLineWidth = candleLineWidth ?? this.candleLineWidth;

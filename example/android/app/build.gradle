@@ -19,7 +19,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.k_chart_example"
-        minSdk = 21
+        minSdkVersion = flutter.minSdkVersion
         targetSdk = flutter.compileSdkVersion
         versionCode = 1
         versionName = "1.0"

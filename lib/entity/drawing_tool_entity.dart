@@ -73,7 +73,7 @@ abstract class DrawingTool {
   /// 获取绘制时的Paint对象
   Paint getPaint({double? opacity}) {
     return Paint()
-      ..color = color.withOpacity(opacity ?? 1.0)
+      ..color = color.withValues(alpha: opacity ?? 1.0)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
@@ -84,7 +84,7 @@ abstract class DrawingTool {
   /// 获取填充Paint对象
   Paint getFillPaint({double? opacity}) {
     return Paint()
-      ..color = color.withOpacity(opacity ?? 1.0)
+      ..color = color.withValues(alpha: opacity ?? 1.0)
       ..style = PaintingStyle.fill
       ..isAntiAlias = true;
   }
@@ -98,14 +98,14 @@ abstract class DrawingTool {
 
     // 绘制高亮背景
     final highlightPaint = Paint()
-      ..color = color.withOpacity(highlightOpacity)
+      ..color = color.withValues(alpha: highlightOpacity)
       ..style = PaintingStyle.fill;
 
     canvas.drawRect(bounds.inflate(3.0), highlightPaint);
 
     // 绘制选中边框
     final borderPaint = Paint()
-      ..color = Colors.white.withOpacity(0.8)
+      ..color = Colors.white.withValues(alpha: 0.8)
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
@@ -225,7 +225,8 @@ class TrendLineTool extends DrawingTool {
         'TrendLineTool.draw 开始: id=$id, state=$state, 逻辑坐标 startIndex=$startIndex, startPrice=$startPrice, endIndex=$endIndex, endPrice=$endPrice');
 
     final paint = Paint()
-      ..color = color.withOpacity(state == DrawingToolState.drawing ? 0.6 : 1.0)
+      ..color =
+          color.withValues(alpha: state == DrawingToolState.drawing ? 0.6 : 1.0)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
@@ -351,7 +352,7 @@ class TrendLineTool extends DrawingTool {
       'startPrice': startPrice,
       'endIndex': endIndex,
       'endPrice': endPrice,
-      'color': color.value,
+      'color': color.toARGB32(),
       'strokeWidth': strokeWidth,
       'extendLeft': extendLeft,
       'extendRight': extendRight,
@@ -412,7 +413,8 @@ class TrendAngleTool extends DrawingTool {
     }
 
     final paint = Paint()
-      ..color = color.withOpacity(state == DrawingToolState.drawing ? 0.6 : 1.0)
+      ..color =
+          color.withValues(alpha: state == DrawingToolState.drawing ? 0.6 : 1.0)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
@@ -560,7 +562,7 @@ class TrendAngleTool extends DrawingTool {
             color: color, 
             fontSize: 12,
             fontWeight: FontWeight.bold,
-            backgroundColor: Colors.white.withOpacity(0.8),
+            backgroundColor: Colors.white.withValues(alpha: 0.8),
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -624,7 +626,7 @@ class TrendAngleTool extends DrawingTool {
       'endIndex': endIndex,
       'endPrice': endPrice,
       'angle': angle,
-      'color': color.value,
+      'color': color.toARGB32(),
       'strokeWidth': strokeWidth,
       'createTime': createTime.millisecondsSinceEpoch,
     };
@@ -678,7 +680,8 @@ class ArrowTool extends DrawingTool {
         'ArrowTool.draw 开始: id=$id, state=$state, 逻辑坐标 startIndex=$startIndex, startPrice=$startPrice, endIndex=$endIndex, endPrice=$endPrice');
 
     final paint = Paint()
-      ..color = color.withOpacity(state == DrawingToolState.drawing ? 0.6 : 1.0)
+      ..color =
+          color.withValues(alpha: state == DrawingToolState.drawing ? 0.6 : 1.0)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
@@ -803,7 +806,7 @@ class ArrowTool extends DrawingTool {
       'endIndex': endIndex,
       'endPrice': endPrice,
       'arrowHeadSize': arrowHeadSize,
-      'color': color.value,
+      'color': color.toARGB32(),
       'strokeWidth': strokeWidth,
       'createTime': createTime.millisecondsSinceEpoch,
     };
@@ -854,7 +857,8 @@ class VerticalLineTool extends DrawingTool {
     }
 
     final paint = Paint()
-      ..color = color.withOpacity(state == DrawingToolState.drawing ? 0.6 : 1.0)
+      ..color =
+          color.withValues(alpha: state == DrawingToolState.drawing ? 0.6 : 1.0)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
@@ -948,7 +952,7 @@ class VerticalLineTool extends DrawingTool {
       'type': type.index,
       'lineIndex': lineIndex,
       'timePoint': timePoint?.millisecondsSinceEpoch,
-      'color': color.value,
+      'color': color.toARGB32(),
       'strokeWidth': strokeWidth,
       'createTime': createTime.millisecondsSinceEpoch,
     };
@@ -996,7 +1000,8 @@ class HorizontalLineTool extends DrawingTool {
     }
 
     final paint = Paint()
-      ..color = color.withOpacity(state == DrawingToolState.drawing ? 0.6 : 1.0)
+      ..color =
+          color.withValues(alpha: state == DrawingToolState.drawing ? 0.6 : 1.0)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
@@ -1107,7 +1112,7 @@ class HorizontalLineTool extends DrawingTool {
       'id': id,
       'type': type.index,
       'priceLevel': priceLevel,
-      'color': color.value,
+      'color': color.toARGB32(),
       'strokeWidth': strokeWidth,
       'createTime': createTime.millisecondsSinceEpoch,
     };
@@ -1170,7 +1175,8 @@ class HorizontalRayTool extends DrawingTool {
     final mainChartBottom = mainChartTop + mainChartHeight;
 
     final paint = Paint()
-      ..color = color.withOpacity(state == DrawingToolState.drawing ? 0.6 : 1.0)
+      ..color =
+          color.withValues(alpha: state == DrawingToolState.drawing ? 0.6 : 1.0)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
@@ -1349,7 +1355,6 @@ class HorizontalRayTool extends DrawingTool {
     }
   }
 
-  @override
   DrawingTool copyWith({
     String? id,
     Color? color,
@@ -1379,7 +1384,7 @@ class HorizontalRayTool extends DrawingTool {
       'startPrice': startPrice,
       'endIndex': endIndex,
       'endPrice': endPrice,
-      'color': color.value,
+      'color': color.toARGB32(),
       'strokeWidth': strokeWidth,
       'isVisible': isVisible,
       'createTime': createTime.millisecondsSinceEpoch,
@@ -1530,7 +1535,8 @@ class RayTool extends DrawingTool {
     final mainChartBottom = mainChartTop + mainChartHeight;
 
     final paint = Paint()
-      ..color = color.withOpacity(state == DrawingToolState.drawing ? 0.6 : 1.0)
+      ..color =
+          color.withValues(alpha: state == DrawingToolState.drawing ? 0.6 : 1.0)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
@@ -1852,7 +1858,7 @@ class RayTool extends DrawingTool {
       'startPrice': startPrice,
       'directionIndex': directionIndex,
       'directionPrice': directionPrice,
-      'color': color.value,
+      'color': color.toARGB32(),
       'strokeWidth': strokeWidth,
       'createTime': createTime.millisecondsSinceEpoch,
     };
@@ -1903,7 +1909,8 @@ class CrossLineTool extends DrawingTool {
     }
 
     final paint = Paint()
-      ..color = color.withOpacity(state == DrawingToolState.drawing ? 0.6 : 1.0)
+      ..color =
+          color.withValues(alpha: state == DrawingToolState.drawing ? 0.6 : 1.0)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
@@ -2035,7 +2042,7 @@ class CrossLineTool extends DrawingTool {
       'type': type.index,
       'centerIndex': centerIndex,
       'centerPrice': centerPrice,
-      'color': color.value,
+      'color': color.toARGB32(),
       'strokeWidth': strokeWidth,
       'createTime': createTime.millisecondsSinceEpoch,
     };

@@ -95,13 +95,10 @@ abstract class BaseChartPainter extends CustomPainter {
     int time = secondTime - firstTime;
     time ~/= 1000;
     
-    //日线及以上 (1天 = 86400秒): 显示年月日
     if (time >= 24 * 60 * 60) {
-      mFormats = [yy, '-', mm, '-', dd];
-    }
-    //小时线和分钟线: 显示年月日时分
-    else {
-      mFormats = [yy, '-', mm, '-', dd, ' ', HH, ':', nn];
+      mFormats = [yyyy, '-', mm, '-', dd];
+    } else {
+      mFormats = [yyyy, '-', mm, '-', dd, ' ', HH, ':', nn];
     }
   }
 
@@ -210,7 +207,7 @@ abstract class BaseChartPainter extends CustomPainter {
 
   void getMainMaxMinValue(KLineEntity item, int i) {
     double maxPrice, minPrice;
-    if (mainState == MainState.MA) {
+    if (mainState == MainState.MA || mainState == MainState.EMA) {
       maxPrice = max(item.high, _findMaxMA(item.maValueList ?? [0]));
       minPrice = min(item.low, _findMinMA(item.maValueList ?? [0]));
     } else if (mainState == MainState.BOLL) {
