@@ -1,3 +1,6 @@
+## 2.6.0
+* Added: watermark
+
 ## 2.5.0
 * Fixed: Optimize gestures
 

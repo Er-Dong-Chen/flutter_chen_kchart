@@ -170,6 +170,10 @@ class KChartWidget extends StatefulWidget {
   final bool scaleHaptic; // 缩放操作是否震动
   final bool boundaryHaptic; // 到达边界是否震动
 
+  final Widget? watermark;
+  final Alignment watermarkAlignment;
+  final double watermarkOpacity;
+
   KChartWidget(
     this.datas, {
     this.chartStyle,
@@ -225,6 +229,9 @@ class KChartWidget extends StatefulWidget {
     this.crossLineTapHaptic = true, // 默认点击十字线标签震动
     this.scaleHaptic = false, // 默认缩放不震动（避免过于频繁）
     this.boundaryHaptic = true, // 默认边界震动
+    this.watermark,
+    this.watermarkAlignment = Alignment.center,
+    this.watermarkOpacity = 0.14,
   });
 
   @override
@@ -741,7 +748,8 @@ class _KChartWidgetState extends State<KChartWidget>
       getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
       getPriceFromY: (screenY) =>
           _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
-      calculateSelectedX: (screenX) => _painter?.calculateSelectedXExtended(screenX) ?? 0,
+      calculateSelectedX: (screenX) =>
+          _painter?.calculateSelectedXExtended(screenX) ?? 0,
       chartRect: _painter?.mMainRect ?? Rect.zero,
     );
 
@@ -770,7 +778,8 @@ class _KChartWidgetState extends State<KChartWidget>
       getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
       getPriceFromY: (screenY) =>
           _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
-      calculateSelectedX: (screenX) => _painter?.calculateSelectedXExtended(screenX) ?? 0,
+      calculateSelectedX: (screenX) =>
+          _painter?.calculateSelectedXExtended(screenX) ?? 0,
       chartRect: _painter?.mMainRect ?? Rect.zero,
     );
 
@@ -804,7 +813,8 @@ class _KChartWidgetState extends State<KChartWidget>
       getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
       getPriceFromY: (screenY) =>
           _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
-      calculateSelectedX: (screenX) => _painter?.calculateSelectedXExtended(screenX) ?? 0,
+      calculateSelectedX: (screenX) =>
+          _painter?.calculateSelectedXExtended(screenX) ?? 0,
       chartRect: _painter?.mMainRect ?? Rect.zero,
     );
 
@@ -890,7 +900,8 @@ class _KChartWidgetState extends State<KChartWidget>
         getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
         getPriceFromY: (screenY) =>
             _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
-        calculateSelectedX: (screenX) => _painter?.calculateSelectedXExtended(screenX) ?? 0,
+        calculateSelectedX: (screenX) =>
+            _painter?.calculateSelectedXExtended(screenX) ?? 0,
         chartRect: _painter?.mMainRect ?? Rect.zero,
       );
       debugPrint('实时更新终点位置到: $actualPosition');
@@ -1048,7 +1059,8 @@ class _KChartWidgetState extends State<KChartWidget>
                   getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
                   getPriceFromY: (screenY) =>
                       _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
-                  calculateSelectedX: (screenX) => _painter?.calculateSelectedXExtended(screenX) ?? 0,
+                  calculateSelectedX: (screenX) =>
+                      _painter?.calculateSelectedXExtended(screenX) ?? 0,
                   chartRect: _painter?.mMainRect ?? Rect.zero,
                 );
               }
@@ -1111,7 +1123,8 @@ class _KChartWidgetState extends State<KChartWidget>
                 getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
                 getPriceFromY: (screenY) =>
                     _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
-                calculateSelectedX: (screenX) => _painter?.calculateSelectedXExtended(screenX) ?? 0,
+                calculateSelectedX: (screenX) =>
+                    _painter?.calculateSelectedXExtended(screenX) ?? 0,
                 chartRect: _painter?.mMainRect ?? Rect.zero,
               );
               notifyChanged();
@@ -1143,7 +1156,8 @@ class _KChartWidgetState extends State<KChartWidget>
                     getPriceFromY: (screenY) =>
                         _painter?.mMainRenderer.getYFromPrice(screenY) ??
                         screenY,
-                    calculateSelectedX: (screenX) => _painter?.calculateSelectedXExtended(screenX) ?? 0,
+                    calculateSelectedX: (screenX) =>
+                        _painter?.calculateSelectedXExtended(screenX) ?? 0,
                     chartRect: _painter?.mMainRect ?? Rect.zero,
                   );
                 }
@@ -1204,7 +1218,8 @@ class _KChartWidgetState extends State<KChartWidget>
                   getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
                   getPriceFromY: (screenY) =>
                       _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
-                  calculateSelectedX: (screenX) => _painter?.calculateSelectedXExtended(screenX) ?? 0,
+                  calculateSelectedX: (screenX) =>
+                      _painter?.calculateSelectedXExtended(screenX) ?? 0,
                   chartRect: _painter?.mMainRect ?? Rect.zero,
                 );
                 notifyChanged();
@@ -1265,8 +1280,8 @@ class _KChartWidgetState extends State<KChartWidget>
                   if (!_shouldShowCrossLine) {
                     isOnTap = true;
                     if (widget.isTapShowInfoDialog) {
-                      mSelectX =
-                          _snapCrosshairToCandleCenterX(details.localPosition.dx);
+                      mSelectX = _snapCrosshairToCandleCenterX(
+                          details.localPosition.dx);
                     }
                     notifyChanged();
                   }
@@ -1498,6 +1513,20 @@ class _KChartWidgetState extends State<KChartWidget>
                     size: Size(double.infinity, double.infinity),
                     painter: _painter,
                   ),
+                  if (widget.watermark != null)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: Align(
+                          alignment: widget.watermarkAlignment,
+                          child: Opacity(
+                            opacity: widget.watermarkOpacity
+                                .clamp(0.0, 1.0)
+                                .toDouble(),
+                            child: widget.watermark!,
+                          ),
+                        ),
+                      ),
+                    ),
                   // 绘图工具的十字线选择器
                   if (widget.enableDrawingTools &&
                       _isDrawingMode &&
@@ -1594,15 +1623,13 @@ class _KChartWidgetState extends State<KChartWidget>
                 entity.open.toStringAsFixed(widget.fixedLength)),
             MapEntry(translations.high,
                 entity.high.toStringAsFixed(widget.fixedLength)),
-            MapEntry(
-                translations.low, entity.low.toStringAsFixed(widget.fixedLength)),
+            MapEntry(translations.low,
+                entity.low.toStringAsFixed(widget.fixedLength)),
             MapEntry(translations.close,
                 entity.close.toStringAsFixed(widget.fixedLength)),
-            MapEntry(
-                translations.changeAmount,
+            MapEntry(translations.changeAmount,
                 "${upDown > 0 ? "+" : ""}${upDown.toStringAsFixed(widget.fixedLength)}"),
-            MapEntry(
-                translations.change,
+            MapEntry(translations.change,
                 "${upDownPercent > 0 ? "+" : ''}${upDownPercent.toStringAsFixed(2)}%"),
             if (entity.amount != null)
               MapEntry(translations.amount, entity.amount!.toInt().toString()),
@@ -1634,8 +1661,8 @@ class _KChartWidgetState extends State<KChartWidget>
                 ],
               ),
               borderRadius: BorderRadius.circular(8),
-              border:
-                  Border.all(color: borderColor.withValues(alpha: 0.7), width: 1.0),
+              border: Border.all(
+                  color: borderColor.withValues(alpha: 0.7), width: 1.0),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.28),
@@ -1677,8 +1704,7 @@ class _KChartWidgetState extends State<KChartWidget>
                   final item = entry.value;
                   final isLast = index == rows.length - 1;
                   return Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                     decoration: BoxDecoration(
                       border: isLast
                           ? null

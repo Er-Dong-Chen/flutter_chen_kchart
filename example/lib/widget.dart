@@ -899,6 +899,39 @@ class _KChartViewState extends State<KChartView> {
                         secondaryState: secondaryState,
                         volHidden: volHidden,
                         showNowPrice: true,
+                        watermark: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Text(
+                              'Flutter_Chen_Kchart',
+                              style: TextStyle(
+                                fontSize: 28.sp,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                                foreground: Paint()
+                                  ..style = PaintingStyle.stroke
+                                  ..strokeWidth = 2.0
+                                  ..color = Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                              ),
+                            ),
+                            Text(
+                              'Flutter_Chen_Kchart',
+                              style: TextStyle(
+                                fontSize: 28.sp,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .secondaryContainer,
+                              ),
+                            ),
+                          ],
+                        ),
+                        watermarkOpacity:
+                            widget.isDarkTheme == true ? 0.10 : 0.08,
+                        watermarkAlignment: Alignment.center,
                         onLoadMore: noMoreHistory ? null : _debouncedLoadMore,
                         controller: _chartController,
                         enableDrawingTools: widget.enableDrawingTools ?? false,
