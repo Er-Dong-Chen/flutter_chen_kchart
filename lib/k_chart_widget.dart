@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart'; // 添加：用于平台检测
 import 'package:flutter/gestures.dart';
@@ -1374,18 +1375,20 @@ class _KChartWidgetState extends State<KChartWidget>
                   if (!widget.enablePinchZoom) return;
                   isScale = true;
 
-                  final sensitivity = widget.scaleSensitivity;
-                  final scaleDelta = details.scale - 1.0;
-                  final accumulatedDelta = scaleDelta * sensitivity;
-
-                  double factor;
-                  if (accumulatedDelta >= 0) {
-                    factor = 1.0 + (accumulatedDelta * 2.8);
-                  } else {
-                    factor = 1.0 + (accumulatedDelta * 3.6);
+                  final rawScale = details.scale;
+                  if (rawScale.isNaN || rawScale.isInfinite || rawScale <= 0) {
+                    return;
                   }
 
-                  if (factor.isNaN || factor.isInfinite || factor <= 0) return;
+                  final clampedGestureScale = rawScale.clamp(0.5, 3);
+                  final sensitivity = widget.scaleSensitivity;
+                  final exponent =
+                      (0.65 + (sensitivity * 0.3)).clamp(0.65, 1.75).toDouble();
+                  final factor =
+                      math.pow(clampedGestureScale, exponent).toDouble();
+                  if (factor.isNaN || factor.isInfinite || factor <= 0) {
+                    return;
+                  }
 
                   final targetScale = _pinchStartScale * factor;
                   final currentFocalPoint = details.localFocalPoint;

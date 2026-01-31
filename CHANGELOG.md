@@ -1,3 +1,6 @@
+## 2.7.0
+* Improved: scaleSensitivity
+
 ## 2.6.0
 * Added: watermark
 
