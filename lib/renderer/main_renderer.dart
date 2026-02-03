@@ -291,6 +291,11 @@ class MainRenderer extends BaseChartRenderer<CandleEntity> {
     return (maxValue - y) * scaleY + _contentRect.top;
   }
 
+  @override
+  double getYFromPrice(double screenY) {
+    return maxValue - (screenY - _contentRect.top) / scaleY;
+  }
+
   void updateTrendLineData() {
     trendLineMax = maxValue;
     trendLineScale = scaleY;

@@ -28,6 +28,12 @@ enum DrawingMode {
   continuous, // 持续画图模式
 }
 
+enum DrawingLineStyle {
+  solid,
+  dashed,
+  dotted,
+}
+
 // 基础绘图工具抽象类
 abstract class DrawingTool {
   final String id;
@@ -35,6 +41,7 @@ abstract class DrawingTool {
   final DateTime createTime;
   Color color;
   double strokeWidth;
+  DrawingLineStyle lineStyle;
   bool isVisible;
   DrawingToolState state;
 
@@ -44,6 +51,7 @@ abstract class DrawingTool {
     required this.createTime,
     this.color = const Color(0xFFFFD700), // 默认金色
     this.strokeWidth = 2.0,
+    this.lineStyle = DrawingLineStyle.solid,
     this.isVisible = true,
     this.state = DrawingToolState.none,
   });
@@ -87,6 +95,58 @@ abstract class DrawingTool {
       ..color = color.withValues(alpha: opacity ?? 1.0)
       ..style = PaintingStyle.fill
       ..isAntiAlias = true;
+  }
+
+  void drawStyledLine(Canvas canvas, Offset start, Offset end, Paint paint) {
+    switch (lineStyle) {
+      case DrawingLineStyle.solid:
+        canvas.drawLine(start, end, paint);
+        return;
+      case DrawingLineStyle.dashed:
+        _drawDashedLine(canvas, start, end, paint);
+        return;
+      case DrawingLineStyle.dotted:
+        _drawDottedLine(canvas, start, end, paint);
+        return;
+    }
+  }
+
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
+    const dashLength = 6.0;
+    const dashSpace = 4.0;
+    final distance = (end - start).distance;
+    if (distance <= 0) return;
+    final direction = (end - start) / distance;
+
+    var currentDistance = 0.0;
+    while (currentDistance < distance) {
+      final nextDistance =
+          (currentDistance + dashLength).clamp(0.0, distance).toDouble();
+      final segmentStart = start + direction * currentDistance;
+      final segmentEnd = start + direction * nextDistance;
+      canvas.drawLine(segmentStart, segmentEnd, paint);
+      currentDistance = (nextDistance + dashSpace).toDouble();
+    }
+  }
+
+  void _drawDottedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
+    final distance = (end - start).distance;
+    if (distance <= 0) return;
+    final direction = (end - start) / distance;
+    final dotRadius = (paint.strokeWidth * 0.6).clamp(1.0, 2.4).toDouble();
+    final step = (dotRadius * 3.2).clamp(4.0, 10.0).toDouble();
+
+    var d = 0.0;
+    final dotPaint = Paint()
+      ..color = paint.color
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    while (d <= distance) {
+      final p = start + direction * d;
+      canvas.drawCircle(p, dotRadius, dotPaint);
+      d += step;
+    }
   }
 
   /// 绘制选中状态的视觉反馈
@@ -254,14 +314,7 @@ class TrendLineTool extends DrawingTool {
               startPoint.dy.isFinite &&
               endPoint.dx.isFinite &&
               endPoint.dy.isFinite) {
-            // 如果是预览状态，绘制虚线
-            if (state == DrawingToolState.drawing) {
-              _drawDashedLine(canvas, startPoint, endPoint, paint);
-              debugPrint('绘制虚线趋势线');
-            } else {
-              canvas.drawLine(startPoint, endPoint, paint);
-              debugPrint('绘制实线趋势线');
-            }
+            drawStyledLine(canvas, startPoint, endPoint, paint);
 
             // 如果需要延伸
             if (extendLeft || extendRight) {
@@ -271,13 +324,13 @@ class TrendLineTool extends DrawingTool {
               if (extendLeft && dx != 0) {
                 final extendedStart =
                     Offset(0, startPoint.dy - (startPoint.dx * dy / dx));
-                canvas.drawLine(startPoint, extendedStart, paint);
+                drawStyledLine(canvas, startPoint, extendedStart, paint);
               }
 
               if (extendRight && dx != 0) {
                 final extendedEnd = Offset(size.width,
                     endPoint.dy + ((size.width - endPoint.dx) * dy / dx));
-                canvas.drawLine(endPoint, extendedEnd, paint);
+                drawStyledLine(canvas, endPoint, extendedEnd, paint);
               }
             }
           } else {
@@ -364,6 +417,7 @@ class TrendLineTool extends DrawingTool {
       'endPrice': endPrice,
       'color': color.toARGB32(),
       'strokeWidth': strokeWidth,
+      'lineStyle': lineStyle.index,
       'extendLeft': extendLeft,
       'extendRight': extendRight,
       'createTime': createTime.millisecondsSinceEpoch,
@@ -371,7 +425,7 @@ class TrendLineTool extends DrawingTool {
   }
 
   static TrendLineTool fromJson(Map<String, dynamic> json) {
-    return TrendLineTool(
+    final tool = TrendLineTool(
       id: json['id'],
       startIndex: json['startIndex']?.toDouble(),
       startPrice: json['startPrice']?.toDouble(),
@@ -382,6 +436,13 @@ class TrendLineTool extends DrawingTool {
       extendLeft: json['extendLeft'] ?? false,
       extendRight: json['extendRight'] ?? false,
     );
+    final styleIndex = json['lineStyle'];
+    if (styleIndex is int &&
+        styleIndex >= 0 &&
+        styleIndex < DrawingLineStyle.values.length) {
+      tool.lineStyle = DrawingLineStyle.values[styleIndex];
+    }
+    return tool;
   }
 }
 
@@ -454,9 +515,8 @@ class TrendAngleTool extends DrawingTool {
         if (endScreenX.isFinite && endScreenY.isFinite) {
           debugPrint('绘制完整趋势角度线: 从 $startPoint 到 $endPoint');
 
-          // 绘制趋势角度工具：主线实线，参考线和角度弧虚线
-          // 1. 绘制主趋势线（始终实线）
-          canvas.drawLine(startPoint, endPoint, paint);
+          // 1. 绘制主趋势线
+          drawStyledLine(canvas, startPoint, endPoint, paint);
 
           // 2. 绘制水平参考线（始终虚线）
           final horizontalEndPoint =
@@ -649,12 +709,13 @@ class TrendAngleTool extends DrawingTool {
       'angle': angle,
       'color': color.toARGB32(),
       'strokeWidth': strokeWidth,
+      'lineStyle': lineStyle.index,
       'createTime': createTime.millisecondsSinceEpoch,
     };
   }
 
   static TrendAngleTool fromJson(Map<String, dynamic> json) {
-    return TrendAngleTool(
+    final tool = TrendAngleTool(
       id: json['id'],
       startIndex: json['startIndex']?.toDouble(),
       startPrice: json['startPrice']?.toDouble(),
@@ -664,6 +725,13 @@ class TrendAngleTool extends DrawingTool {
       color: Color(json['color']),
       strokeWidth: json['strokeWidth']?.toDouble() ?? 2.0,
     );
+    final styleIndex = json['lineStyle'];
+    if (styleIndex is int &&
+        styleIndex >= 0 &&
+        styleIndex < DrawingLineStyle.values.length) {
+      tool.lineStyle = DrawingLineStyle.values[styleIndex];
+    }
+    return tool;
   }
 }
 
@@ -730,15 +798,7 @@ class ArrowTool extends DrawingTool {
               startPoint.dy.isFinite &&
               endPoint.dx.isFinite &&
               endPoint.dy.isFinite) {
-            // 如果是预览状态，绘制虚线
-            if (state == DrawingToolState.drawing) {
-              _drawDashedLine(canvas, startPoint, endPoint, paint);
-              debugPrint('绘制虚线箭头');
-            } else {
-              // 绘制箭头主体
-              canvas.drawLine(startPoint, endPoint, paint);
-              debugPrint('绘制实线箭头');
-            }
+            drawStyledLine(canvas, startPoint, endPoint, paint);
 
             // 计算箭头头部 - 修正角度计算，确保箭头精确指向终点
             final direction = (endPoint - startPoint).direction;
@@ -748,14 +808,8 @@ class ArrowTool extends DrawingTool {
             final arrowHead2 = endPoint +
                 Offset.fromDirection(direction - arrowAngle, arrowHeadSize);
 
-            // 绘制箭头头部
-            if (state == DrawingToolState.drawing) {
-              _drawDashedLine(canvas, endPoint, arrowHead1, paint);
-              _drawDashedLine(canvas, endPoint, arrowHead2, paint);
-            } else {
-              canvas.drawLine(endPoint, arrowHead1, paint);
-              canvas.drawLine(endPoint, arrowHead2, paint);
-            }
+            drawStyledLine(canvas, endPoint, arrowHead1, paint);
+            drawStyledLine(canvas, endPoint, arrowHead2, paint);
           } else {
             debugPrint('警告：无效的绘制点 startPoint=$startPoint, endPoint=$endPoint');
           }
@@ -841,12 +895,13 @@ class ArrowTool extends DrawingTool {
       'arrowHeadSize': arrowHeadSize,
       'color': color.toARGB32(),
       'strokeWidth': strokeWidth,
+      'lineStyle': lineStyle.index,
       'createTime': createTime.millisecondsSinceEpoch,
     };
   }
 
   static ArrowTool fromJson(Map<String, dynamic> json) {
-    return ArrowTool(
+    final tool = ArrowTool(
       id: json['id'],
       startIndex: json['startIndex']?.toDouble(),
       startPrice: json['startPrice']?.toDouble(),
@@ -856,6 +911,13 @@ class ArrowTool extends DrawingTool {
       color: Color(json['color']),
       strokeWidth: json['strokeWidth'],
     );
+    final styleIndex = json['lineStyle'];
+    if (styleIndex is int &&
+        styleIndex >= 0 &&
+        styleIndex < DrawingLineStyle.values.length) {
+      tool.lineStyle = DrawingLineStyle.values[styleIndex];
+    }
+    return tool;
   }
 }
 
@@ -916,19 +978,8 @@ class VerticalLineTool extends DrawingTool {
         debugPrint(
             '垂直线主图区域计算: top=$mainChartTop, bottom=$mainChartBottom, height=$mainHeight');
 
-        // 如果是预览状态，绘制虚线效果
-        if (state == DrawingToolState.drawing) {
-          _drawDashedLine(canvas, Offset(screenX, mainChartTop),
-              Offset(screenX, mainChartBottom), paint);
-          debugPrint('绘制虚线垂直线（严格限制在K线主图区域）');
-        } else {
-          canvas.drawLine(
-            Offset(screenX, mainChartTop),
-            Offset(screenX, mainChartBottom),
-            paint,
-          );
-          debugPrint('绘制实线垂直线（严格限制在K线主图区域）');
-        }
+        drawStyledLine(canvas, Offset(screenX, mainChartTop),
+            Offset(screenX, mainChartBottom), paint);
       } else {
         debugPrint('警告：无效的屏幕坐标 screenX=$screenX');
       }
@@ -989,12 +1040,13 @@ class VerticalLineTool extends DrawingTool {
       'timePoint': timePoint?.millisecondsSinceEpoch,
       'color': color.toARGB32(),
       'strokeWidth': strokeWidth,
+      'lineStyle': lineStyle.index,
       'createTime': createTime.millisecondsSinceEpoch,
     };
   }
 
   static VerticalLineTool fromJson(Map<String, dynamic> json) {
-    return VerticalLineTool(
+    final tool = VerticalLineTool(
       id: json['id'],
       lineIndex: json['lineIndex']?.toDouble(),
       timePoint: json['timePoint'] != null
@@ -1003,6 +1055,13 @@ class VerticalLineTool extends DrawingTool {
       color: Color(json['color']),
       strokeWidth: json['strokeWidth'],
     );
+    final styleIndex = json['lineStyle'];
+    if (styleIndex is int &&
+        styleIndex >= 0 &&
+        styleIndex < DrawingLineStyle.values.length) {
+      tool.lineStyle = DrawingLineStyle.values[styleIndex];
+    }
+    return tool;
   }
 }
 
@@ -1062,21 +1121,8 @@ class HorizontalLineTool extends DrawingTool {
           return; // 超出边界时完全不绘制
         }
 
-        // 在边界内正常绘制
-        // 如果是预览状态，绘制虚线效果
-        if (state == DrawingToolState.drawing) {
-          _drawDashedLine(
-              canvas, Offset(0, screenY), Offset(size.width, screenY), paint);
-          debugPrint('绘制虚线水平线');
-        } else {
-          // 绘制横跨整个图表的水平线
-          debugPrint('绘制实线水平线: y=$screenY, 宽度=${size.width}');
-          canvas.drawLine(
-            Offset(0, screenY),
-            Offset(size.width, screenY),
-            paint,
-          );
-        }
+        drawStyledLine(
+            canvas, Offset(0, screenY), Offset(size.width, screenY), paint);
       } else {
         debugPrint('警告：无效的屏幕坐标 screenY=$screenY');
       }
@@ -1151,17 +1197,25 @@ class HorizontalLineTool extends DrawingTool {
       'priceLevel': priceLevel,
       'color': color.toARGB32(),
       'strokeWidth': strokeWidth,
+      'lineStyle': lineStyle.index,
       'createTime': createTime.millisecondsSinceEpoch,
     };
   }
 
   static HorizontalLineTool fromJson(Map<String, dynamic> json) {
-    return HorizontalLineTool(
+    final tool = HorizontalLineTool(
       id: json['id'],
       priceLevel: json['priceLevel'],
       color: Color(json['color']),
       strokeWidth: json['strokeWidth'],
     );
+    final styleIndex = json['lineStyle'];
+    if (styleIndex is int &&
+        styleIndex >= 0 &&
+        styleIndex < DrawingLineStyle.values.length) {
+      tool.lineStyle = DrawingLineStyle.values[styleIndex];
+    }
+    return tool;
   }
 }
 
@@ -1256,14 +1310,7 @@ class HorizontalRayTool extends DrawingTool {
 
         debugPrint('绘制水平射线: 从起点 $startPoint 到右边界 $endPoint（约束在K线区域）');
 
-        // 如果是预览状态，绘制虚线
-        if (state == DrawingToolState.drawing) {
-          _drawDashedLine(canvas, startPoint, endPoint, paint);
-          debugPrint('绘制虚线水平射线');
-        } else {
-          canvas.drawLine(startPoint, endPoint, paint);
-          debugPrint('绘制实线水平射线');
-        }
+        drawStyledLine(canvas, startPoint, endPoint, paint);
 
         // 绘制价格标签（让标签跟随水平射线的位置移动）
         if (state != DrawingToolState.drawing && startPrice != null) {
@@ -1434,13 +1481,14 @@ class HorizontalRayTool extends DrawingTool {
       'endPrice': endPrice,
       'color': color.toARGB32(),
       'strokeWidth': strokeWidth,
+      'lineStyle': lineStyle.index,
       'isVisible': isVisible,
       'createTime': createTime.millisecondsSinceEpoch,
     };
   }
 
   static HorizontalRayTool fromJson(Map<String, dynamic> json) {
-    return HorizontalRayTool(
+    final tool = HorizontalRayTool(
       id: json['id'],
       startIndex: json['startIndex']?.toDouble(),
       startPrice: json['startPrice']?.toDouble(),
@@ -1449,6 +1497,13 @@ class HorizontalRayTool extends DrawingTool {
       color: Color(json['color'] ?? 0xFF00BFFF),
       strokeWidth: json['strokeWidth']?.toDouble() ?? 2.0,
     )..isVisible = json['isVisible'] ?? true;
+    final styleIndex = json['lineStyle'];
+    if (styleIndex is int &&
+        styleIndex >= 0 &&
+        styleIndex < DrawingLineStyle.values.length) {
+      tool.lineStyle = DrawingLineStyle.values[styleIndex];
+    }
+    return tool;
   }
 }
 
@@ -1638,15 +1693,7 @@ class RayTool extends DrawingTool {
           if (endPoint != null) {
             debugPrint('计算得到射线终点: $endPoint');
 
-            // 如果是预览状态，绘制虚线
-            if (state == DrawingToolState.drawing) {
-              _drawDashedLine(canvas, startPoint, endPoint, paint);
-              debugPrint('绘制虚线射线');
-            } else {
-              // 绘制射线
-              canvas.drawLine(startPoint, endPoint, paint);
-              debugPrint('绘制实线射线');
-            }
+            drawStyledLine(canvas, startPoint, endPoint, paint);
           } else {
             debugPrint('无法计算射线终点，跳过绘制');
           }
@@ -1916,12 +1963,13 @@ class RayTool extends DrawingTool {
       'directionPrice': directionPrice,
       'color': color.toARGB32(),
       'strokeWidth': strokeWidth,
+      'lineStyle': lineStyle.index,
       'createTime': createTime.millisecondsSinceEpoch,
     };
   }
 
   static RayTool fromJson(Map<String, dynamic> json) {
-    return RayTool(
+    final tool = RayTool(
       id: json['id'],
       startIndex: json['startIndex']?.toDouble(),
       startPrice: json['startPrice']?.toDouble(),
@@ -1930,6 +1978,13 @@ class RayTool extends DrawingTool {
       color: Color(json['color']),
       strokeWidth: json['strokeWidth']?.toDouble() ?? 2.0,
     );
+    final styleIndex = json['lineStyle'];
+    if (styleIndex is int &&
+        styleIndex >= 0 &&
+        styleIndex < DrawingLineStyle.values.length) {
+      tool.lineStyle = DrawingLineStyle.values[styleIndex];
+    }
+    return tool;
   }
 }
 
@@ -2004,33 +2059,10 @@ class CrossLineTool extends DrawingTool {
         return; // 超出边界时完全不绘制
       }
 
-      // 十字线的垂直线也限制在K线主图区域内
-      // 如果是预览状态，绘制虚线效果
-      if (state == DrawingToolState.drawing) {
-        // 绘制虚线垂直线（严格限制在K线主图区域）
-        _drawDashedLine(canvas, Offset(centerScreenX, mainChartTop),
-            Offset(centerScreenX, mainChartBottom), paint);
-
-        // 绘制虚线水平线（横跨整个宽度）
-        _drawDashedLine(canvas, Offset(0, centerScreenY),
-            Offset(size.width, centerScreenY), paint);
-        debugPrint('绘制虚线十字线（垂直线限制在K线区域）');
-      } else {
-        // 绘制垂直线（严格限制在K线主图区域）
-        canvas.drawLine(
-          Offset(centerScreenX, mainChartTop),
-          Offset(centerScreenX, mainChartBottom),
-          paint,
-        );
-
-        // 绘制水平线（横跨整个宽度）
-        canvas.drawLine(
-          Offset(0, centerScreenY),
-          Offset(size.width, centerScreenY),
-          paint,
-        );
-        debugPrint('绘制实线十字线（垂直线限制在K线区域）');
-      }
+      drawStyledLine(canvas, Offset(centerScreenX, mainChartTop),
+          Offset(centerScreenX, mainChartBottom), paint);
+      drawStyledLine(canvas, Offset(0, centerScreenY),
+          Offset(size.width, centerScreenY), paint);
     } catch (e) {
       debugPrint('CrossLineTool.draw 绘制异常: $e');
     }
@@ -2104,17 +2136,25 @@ class CrossLineTool extends DrawingTool {
       'centerPrice': centerPrice,
       'color': color.toARGB32(),
       'strokeWidth': strokeWidth,
+      'lineStyle': lineStyle.index,
       'createTime': createTime.millisecondsSinceEpoch,
     };
   }
 
   static CrossLineTool fromJson(Map<String, dynamic> json) {
-    return CrossLineTool(
+    final tool = CrossLineTool(
       id: json['id'],
       centerIndex: json['centerIndex']?.toDouble(),
       centerPrice: json['centerPrice']?.toDouble(),
       color: Color(json['color']),
       strokeWidth: json['strokeWidth']?.toDouble() ?? 2.0,
     );
+    final styleIndex = json['lineStyle'];
+    if (styleIndex is int &&
+        styleIndex >= 0 &&
+        styleIndex < DrawingLineStyle.values.length) {
+      tool.lineStyle = DrawingLineStyle.values[styleIndex];
+    }
+    return tool;
   }
 }

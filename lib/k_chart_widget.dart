@@ -6,10 +6,19 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // 添加：用于震动反馈
 import 'package:flutter_chen_kchart/k_chart.dart';
+import 'package:flutter_chen_kchart/widget/drawing_tool_quick_panel.dart';
+import 'package:flutter_chen_kchart/widget/drawing_tool_handle_overlay.dart';
 
 enum MainState { MA, EMA, BOLL, NONE }
 
 enum SecondaryState { MACD, KDJ, RSI, WR, CCI, NONE }
+
+enum _ToolDragMode {
+  none,
+  moveAll,
+  moveStart,
+  moveEnd,
+}
 
 class TimeFormat {
   static const List<String> YEAR_MONTH_DAY = [yyyy, '-', mm, '-', dd];
@@ -291,11 +300,18 @@ class _KChartWidgetState extends State<KChartWidget>
   static const double _movementThreshold = 5.0; // 移动阈值
   Timer? _movementResetTimer; // 移动状态重置定时器
 
+  _ToolDragMode _activeToolDragMode = _ToolDragMode.none;
+  Offset? _lastToolDragPosition;
+
   // 新增：绘图工具十字线选择模式
   bool _isDrawingCrosshairMode = false; // 是否处于绘图十字线选择模式
   bool _isSelectingStartPoint = false; // 是否正在选择起点
   bool _isSelectingEndPoint = false; // 是否正在选择终点
   Offset? _drawingCrosshairPosition; // 绘图十字线位置
+
+  bool _isDrawingToolEditMode = false;
+  Offset? _drawingToolPanelPosition;
+  DrawingTool? _selectedDrawingTool;
 
   // 获取当前主题的颜色和样式
   ChartColors get currentChartColors {
@@ -324,6 +340,11 @@ class _KChartWidgetState extends State<KChartWidget>
   }
 
   // 获取当前绘图模式状态
+  bool get _isDrawingModeEnabled {
+    if (!widget.enableDrawingTools) return false;
+    return _drawingToolManager.modeManager.isDrawingModeEnabled;
+  }
+
   bool get _isDrawingMode {
     if (!widget.enableDrawingTools) return false;
     return _drawingToolManager.modeManager.isDrawingModeEnabled &&
@@ -345,7 +366,26 @@ class _KChartWidgetState extends State<KChartWidget>
       }
 
       _drawingToolManager.onToolsChanged = () {
-        if (mounted) setState(() {});
+        if (!mounted) return;
+        setState(() {
+          if (_isDrawingModeEnabled) {
+            _shouldShowCrossLine = false;
+            isLongPress = false;
+            isOnTap = false;
+            mInfoWindowStream?.sink.add(null);
+          }
+        });
+      };
+
+      _drawingToolManager.onToolSelected = (tool) {
+        if (!mounted) return;
+        setState(() {
+          _selectedDrawingTool = tool;
+          if (tool == null) {
+            _isDrawingToolEditMode = false;
+            _drawingToolPanelPosition = null;
+          }
+        });
       };
     }
 
@@ -552,6 +592,9 @@ class _KChartWidgetState extends State<KChartWidget>
 
   // 新增：启动十字线延迟隐藏
   void _startCrossLineHideTimer() {
+    if (_isDrawingModeEnabled) {
+      return;
+    }
     _crossLineHideTimer?.cancel();
     _crossLineHideTimer =
         Timer(Duration(milliseconds: _crossLineHideDelay), () {
@@ -570,6 +613,10 @@ class _KChartWidgetState extends State<KChartWidget>
 
   // 新增：显示十字线
   void _showCrossLine() {
+    if (_isDrawingModeEnabled) {
+      _shouldShowCrossLine = false;
+      return;
+    }
     _shouldShowCrossLine = true;
     _cancelCrossLineHideTimer();
   }
@@ -582,6 +629,16 @@ class _KChartWidgetState extends State<KChartWidget>
     isOnTap = false;
     mInfoWindowStream?.sink.add(null);
     _currentSelectedIndex = -1;
+  }
+
+  Rect? _getMainRectSafe() {
+    final painter = _painter;
+    if (painter == null) return null;
+    try {
+      return painter.mMainRect;
+    } catch (_) {
+      return null;
+    }
   }
 
   double _snapCrosshairToCandleCenterX(double rawScreenX) {
@@ -669,7 +726,20 @@ class _KChartWidgetState extends State<KChartWidget>
 
     if (_drawingToolManager.currentToolType == null) {
       // 如果没有选择工具，则选择已有的绘图工具
-      _drawingToolManager.selectTool(localPosition);
+      _drawingToolManager.selectToolAt(
+        localPosition,
+        getX: _indexToScreenX,
+        getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
+      );
+      if (_drawingToolManager.selectedTool != null) {
+        _isDrawingToolEditMode = true;
+        _drawingToolPanelPosition = localPosition;
+        _selectedDrawingTool = _drawingToolManager.selectedTool;
+      } else {
+        _isDrawingToolEditMode = false;
+        _drawingToolPanelPosition = null;
+        _selectedDrawingTool = null;
+      }
       return;
     }
 
@@ -751,7 +821,7 @@ class _KChartWidgetState extends State<KChartWidget>
           _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
       calculateSelectedX: (screenX) =>
           _painter?.calculateSelectedXExtended(screenX) ?? 0,
-      chartRect: _painter?.mMainRect ?? Rect.zero,
+      chartRect: _getMainRectSafe() ?? Rect.zero,
     );
 
     // 进入终点选择模式
@@ -781,13 +851,17 @@ class _KChartWidgetState extends State<KChartWidget>
           _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
       calculateSelectedX: (screenX) =>
           _painter?.calculateSelectedXExtended(screenX) ?? 0,
-      chartRect: _painter?.mMainRect ?? Rect.zero,
+      chartRect: _getMainRectSafe() ?? Rect.zero,
     );
 
     _drawingToolManager.finishDrawing();
 
     // 退出十字线选择模式
     _exitDrawingCrosshairMode();
+
+    _isDrawingToolEditMode = _drawingToolManager.selectedTool != null;
+    _selectedDrawingTool = _drawingToolManager.selectedTool;
+    _drawingToolPanelPosition = confirmPosition;
 
     debugPrint('双点工具绘制完成');
     _triggerDrawingToolHaptic();
@@ -816,13 +890,17 @@ class _KChartWidgetState extends State<KChartWidget>
           _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
       calculateSelectedX: (screenX) =>
           _painter?.calculateSelectedXExtended(screenX) ?? 0,
-      chartRect: _painter?.mMainRect ?? Rect.zero,
+      chartRect: _getMainRectSafe() ?? Rect.zero,
     );
 
     _drawingToolManager.finishDrawing();
 
     // 退出十字线选择模式
     _exitDrawingCrosshairMode();
+
+    _isDrawingToolEditMode = _drawingToolManager.selectedTool != null;
+    _selectedDrawingTool = _drawingToolManager.selectedTool;
+    _drawingToolPanelPosition = confirmPosition;
 
     debugPrint('单点工具绘制完成');
     _triggerDrawingToolHaptic();
@@ -838,6 +916,523 @@ class _KChartWidgetState extends State<KChartWidget>
     _drawingStartPosition = null;
     _isDrawingToolMoving = false;
     debugPrint('退出绘图十字线选择模式');
+  }
+
+  double _indexToScreenX(double index) {
+    if (_painter == null) return 0;
+    final p = _painter!;
+    final absoluteX = index * p.mPointWidth + p.mPointWidth / 2;
+    return p.translateXtoX(absoluteX);
+  }
+
+  double _screenXToIndex(double screenX) {
+    if (_painter == null) return 0;
+    final p = _painter!;
+    final translateX = p.xToTranslateX(screenX);
+    return (translateX - p.mPointWidth / 2) / p.mPointWidth;
+  }
+
+  void _moveSelectedDrawingToolByScreenDelta(Offset delta) {
+    if (_painter == null) return;
+    final tool = _drawingToolManager.selectedTool;
+    if (tool == null) return;
+
+    final p = _painter!;
+    final priceFromScreenY =
+        (double screenY) => p.mMainRenderer.getYFromPrice(screenY);
+    final screenYFromPrice = (double price) => p.mMainRenderer.getY(price);
+
+    if (tool is VerticalLineTool) {
+      if (tool.lineIndex == null) return;
+      final x = _indexToScreenX(tool.lineIndex!);
+      tool.lineIndex = _screenXToIndex(x + delta.dx);
+      return;
+    }
+
+    if (tool is HorizontalLineTool) {
+      if (tool.priceLevel == null) return;
+      final y = screenYFromPrice(tool.priceLevel!);
+      tool.priceLevel = priceFromScreenY(y + delta.dy);
+      return;
+    }
+
+    if (tool is CrossLineTool) {
+      if (tool.centerIndex == null || tool.centerPrice == null) return;
+      final x = _indexToScreenX(tool.centerIndex!);
+      final y = screenYFromPrice(tool.centerPrice!);
+      tool.centerIndex = _screenXToIndex(x + delta.dx);
+      tool.centerPrice = priceFromScreenY(y + delta.dy);
+      return;
+    }
+
+    if (tool is HorizontalRayTool) {
+      if (tool.startIndex == null || tool.startPrice == null) return;
+      final oldStartIndex = tool.startIndex!;
+      final sx = _indexToScreenX(tool.startIndex!);
+      final sy = screenYFromPrice(tool.startPrice!);
+      final newStartIndex = _screenXToIndex(sx + delta.dx);
+      final newStartPrice = priceFromScreenY(sy + delta.dy);
+      final deltaIndex = newStartIndex - oldStartIndex;
+      tool.startIndex = newStartIndex;
+      tool.startPrice = newStartPrice;
+      if (tool.endIndex != null) {
+        tool.endIndex = tool.endIndex! + deltaIndex;
+      }
+      if (tool.endPrice != null) {
+        tool.endPrice = newStartPrice;
+      }
+      return;
+    }
+
+    if (tool is RayTool) {
+      if (tool.startIndex == null ||
+          tool.startPrice == null ||
+          tool.directionIndex == null ||
+          tool.directionPrice == null) return;
+      final a = Offset(_indexToScreenX(tool.startIndex!),
+          screenYFromPrice(tool.startPrice!));
+      final b = Offset(_indexToScreenX(tool.directionIndex!),
+          screenYFromPrice(tool.directionPrice!));
+      final na = a + delta;
+      final nb = b + delta;
+      tool.startIndex = _screenXToIndex(na.dx);
+      tool.startPrice = priceFromScreenY(na.dy);
+      tool.directionIndex = _screenXToIndex(nb.dx);
+      tool.directionPrice = priceFromScreenY(nb.dy);
+      return;
+    }
+
+    if (tool is TrendLineTool) {
+      if (tool.startIndex == null ||
+          tool.startPrice == null ||
+          tool.endIndex == null ||
+          tool.endPrice == null) return;
+      final a = Offset(_indexToScreenX(tool.startIndex!),
+          screenYFromPrice(tool.startPrice!));
+      final b = Offset(
+          _indexToScreenX(tool.endIndex!), screenYFromPrice(tool.endPrice!));
+      final na = a + delta;
+      final nb = b + delta;
+      tool.startIndex = _screenXToIndex(na.dx);
+      tool.startPrice = priceFromScreenY(na.dy);
+      tool.endIndex = _screenXToIndex(nb.dx);
+      tool.endPrice = priceFromScreenY(nb.dy);
+      return;
+    }
+
+    if (tool is TrendAngleTool) {
+      if (tool.startIndex == null ||
+          tool.startPrice == null ||
+          tool.endIndex == null ||
+          tool.endPrice == null) return;
+      final a = Offset(_indexToScreenX(tool.startIndex!),
+          screenYFromPrice(tool.startPrice!));
+      final b = Offset(
+          _indexToScreenX(tool.endIndex!), screenYFromPrice(tool.endPrice!));
+      final na = a + delta;
+      final nb = b + delta;
+      tool.startIndex = _screenXToIndex(na.dx);
+      tool.startPrice = priceFromScreenY(na.dy);
+      tool.endIndex = _screenXToIndex(nb.dx);
+      tool.endPrice = priceFromScreenY(nb.dy);
+      return;
+    }
+
+    if (tool is ArrowTool) {
+      if (tool.startIndex == null ||
+          tool.startPrice == null ||
+          tool.endIndex == null ||
+          tool.endPrice == null) return;
+      final a = Offset(_indexToScreenX(tool.startIndex!),
+          screenYFromPrice(tool.startPrice!));
+      final b = Offset(
+          _indexToScreenX(tool.endIndex!), screenYFromPrice(tool.endPrice!));
+      final na = a + delta;
+      final nb = b + delta;
+      tool.startIndex = _screenXToIndex(na.dx);
+      tool.startPrice = priceFromScreenY(na.dy);
+      tool.endIndex = _screenXToIndex(nb.dx);
+      tool.endPrice = priceFromScreenY(nb.dy);
+      return;
+    }
+  }
+
+  double _priceToScreenY(double price) {
+    return _painter?.mMainRenderer.getY(price) ?? 0;
+  }
+
+  double _screenYToPrice(double screenY) {
+    return _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY;
+  }
+
+  bool _beginSelectedToolDrag(Offset localPoint) {
+    if (!_isDrawingModeEnabled) return false;
+    if (_drawingToolManager.currentToolType != null) return false;
+    if (_painter == null) return false;
+
+    var tool = _drawingToolManager.selectedTool;
+    if (tool == null || !_isPointOnTool(tool, localPoint)) {
+      _drawingToolManager.selectToolAt(
+        localPoint,
+        getX: _indexToScreenX,
+        getY: _priceToScreenY,
+      );
+      tool = _drawingToolManager.selectedTool;
+    }
+    if (tool == null) return false;
+
+    final start = _toolStartHandle(tool);
+    final end = _toolEndHandle(tool);
+    const radius = 14.0;
+
+    var mode = _ToolDragMode.moveAll;
+    if (start != null && (localPoint - start).distance <= radius) {
+      mode = _ToolDragMode.moveStart;
+    } else if (end != null && (localPoint - end).distance <= radius) {
+      mode = _ToolDragMode.moveEnd;
+    }
+
+    _isDrawingToolMoving = true;
+    _activeToolDragMode = mode;
+    _lastToolDragPosition = localPoint;
+    _isDrawingToolEditMode = false;
+    return true;
+  }
+
+  bool _isPointOnTool(DrawingTool tool, Offset point) {
+    const handleRadius = 14.0;
+    final start = _toolStartHandle(tool);
+    final end = _toolEndHandle(tool);
+    if (start != null && (point - start).distance <= handleRadius) return true;
+    if (end != null && (point - end).distance <= handleRadius) return true;
+
+    final tolerance = math.max(8.0, tool.strokeWidth * 2.0);
+
+    if (tool is VerticalLineTool) {
+      if (tool.lineIndex == null) return false;
+      final x = _indexToScreenX(tool.lineIndex!);
+      return (point.dx - x).abs() <= tolerance;
+    }
+
+    if (tool is HorizontalLineTool) {
+      if (tool.priceLevel == null) return false;
+      final y = _priceToScreenY(tool.priceLevel!);
+      return (point.dy - y).abs() <= tolerance;
+    }
+
+    if (tool is HorizontalRayTool) {
+      if (tool.startIndex == null || tool.startPrice == null) return false;
+      final x0 = _indexToScreenX(tool.startIndex!);
+      final y0 = _priceToScreenY(tool.startPrice!);
+      if (point.dx < x0 - tolerance) return false;
+      return (point.dy - y0).abs() <= tolerance;
+    }
+
+    if (tool is CrossLineTool) {
+      if (tool.centerIndex == null || tool.centerPrice == null) return false;
+      final cx = _indexToScreenX(tool.centerIndex!);
+      final cy = _priceToScreenY(tool.centerPrice!);
+      return (point.dx - cx).abs() <= tolerance ||
+          (point.dy - cy).abs() <= tolerance;
+    }
+
+    if (tool is TrendLineTool) {
+      if (tool.startIndex == null ||
+          tool.startPrice == null ||
+          tool.endIndex == null ||
+          tool.endPrice == null) return false;
+      final a = Offset(
+          _indexToScreenX(tool.startIndex!), _priceToScreenY(tool.startPrice!));
+      final b = Offset(
+          _indexToScreenX(tool.endIndex!), _priceToScreenY(tool.endPrice!));
+      return _distanceToSegment(point, a, b) <= tolerance;
+    }
+
+    if (tool is TrendAngleTool) {
+      if (tool.startIndex == null ||
+          tool.startPrice == null ||
+          tool.endIndex == null ||
+          tool.endPrice == null) return false;
+      final a = Offset(
+          _indexToScreenX(tool.startIndex!), _priceToScreenY(tool.startPrice!));
+      final b = Offset(
+          _indexToScreenX(tool.endIndex!), _priceToScreenY(tool.endPrice!));
+      return _distanceToSegment(point, a, b) <= tolerance;
+    }
+
+    if (tool is ArrowTool) {
+      if (tool.startIndex == null ||
+          tool.startPrice == null ||
+          tool.endIndex == null ||
+          tool.endPrice == null) return false;
+      final a = Offset(
+          _indexToScreenX(tool.startIndex!), _priceToScreenY(tool.startPrice!));
+      final b = Offset(
+          _indexToScreenX(tool.endIndex!), _priceToScreenY(tool.endPrice!));
+      return _distanceToSegment(point, a, b) <= tolerance;
+    }
+
+    if (tool is RayTool) {
+      if (tool.startIndex == null ||
+          tool.startPrice == null ||
+          tool.directionIndex == null ||
+          tool.directionPrice == null) return false;
+      final a = Offset(
+          _indexToScreenX(tool.startIndex!), _priceToScreenY(tool.startPrice!));
+      final b = Offset(_indexToScreenX(tool.directionIndex!),
+          _priceToScreenY(tool.directionPrice!));
+      return _distanceToRay(point, a, b) <= tolerance;
+    }
+
+    return false;
+  }
+
+  double _distanceToSegment(Offset p, Offset a, Offset b) {
+    final ab = b - a;
+    final ap = p - a;
+    final abLen2 = ab.dx * ab.dx + ab.dy * ab.dy;
+    if (abLen2 == 0) return (p - a).distance;
+    var t = (ap.dx * ab.dx + ap.dy * ab.dy) / abLen2;
+    t = t.clamp(0.0, 1.0);
+    final proj = Offset(a.dx + ab.dx * t, a.dy + ab.dy * t);
+    return (p - proj).distance;
+  }
+
+  double _distanceToRay(Offset p, Offset a, Offset b) {
+    final dir = b - a;
+    final ap = p - a;
+    final dirLen2 = dir.dx * dir.dx + dir.dy * dir.dy;
+    if (dirLen2 == 0) return (p - a).distance;
+    final t = (ap.dx * dir.dx + ap.dy * dir.dy) / dirLen2;
+    if (t <= 0) return (p - a).distance;
+    final proj = Offset(a.dx + dir.dx * t, a.dy + dir.dy * t);
+    return (p - proj).distance;
+  }
+
+  void _updateSelectedToolDrag(Offset delta) {
+    if (_painter == null) return;
+    if (_drawingToolManager.selectedTool == null) return;
+
+    switch (_activeToolDragMode) {
+      case _ToolDragMode.none:
+        return;
+      case _ToolDragMode.moveAll:
+        _moveSelectedDrawingToolByScreenDelta(delta);
+        return;
+      case _ToolDragMode.moveStart:
+        _moveSelectedToolStartByDelta(delta);
+        return;
+      case _ToolDragMode.moveEnd:
+        _moveSelectedToolEndByDelta(delta);
+        return;
+    }
+  }
+
+  void _endSelectedToolDrag() {
+    if (!_isDrawingToolMoving) return;
+    _isDrawingToolMoving = false;
+    _activeToolDragMode = _ToolDragMode.none;
+    _drawingToolPanelPosition = _lastToolDragPosition;
+    _lastToolDragPosition = null;
+    _isDrawingToolEditMode = _drawingToolManager.selectedTool != null;
+    _selectedDrawingTool = _drawingToolManager.selectedTool;
+  }
+
+  Offset? _toolStartHandle(DrawingTool tool) {
+    if (tool is TrendLineTool) {
+      if (tool.startIndex == null || tool.startPrice == null) return null;
+      return Offset(
+          _indexToScreenX(tool.startIndex!), _priceToScreenY(tool.startPrice!));
+    }
+    if (tool is TrendAngleTool) {
+      if (tool.startIndex == null || tool.startPrice == null) return null;
+      return Offset(
+          _indexToScreenX(tool.startIndex!), _priceToScreenY(tool.startPrice!));
+    }
+    if (tool is ArrowTool) {
+      if (tool.startIndex == null || tool.startPrice == null) return null;
+      return Offset(
+          _indexToScreenX(tool.startIndex!), _priceToScreenY(tool.startPrice!));
+    }
+    if (tool is RayTool) {
+      if (tool.startIndex == null || tool.startPrice == null) return null;
+      return Offset(
+          _indexToScreenX(tool.startIndex!), _priceToScreenY(tool.startPrice!));
+    }
+    if (tool is HorizontalRayTool) {
+      if (tool.startIndex == null || tool.startPrice == null) return null;
+      return Offset(
+          _indexToScreenX(tool.startIndex!), _priceToScreenY(tool.startPrice!));
+    }
+    if (tool is VerticalLineTool) {
+      if (tool.lineIndex == null) return null;
+      final rect = _getMainRectSafe();
+      final y = rect != null ? (rect.top + rect.bottom) / 2 : mHeight / 2;
+      return Offset(_indexToScreenX(tool.lineIndex!), y);
+    }
+    if (tool is HorizontalLineTool) {
+      if (tool.priceLevel == null) return null;
+      final rect = _getMainRectSafe();
+      final x = rect != null ? (rect.left + rect.right) / 2 : mWidth / 2;
+      return Offset(x, _priceToScreenY(tool.priceLevel!));
+    }
+    if (tool is CrossLineTool) {
+      if (tool.centerIndex == null || tool.centerPrice == null) return null;
+      return Offset(_indexToScreenX(tool.centerIndex!),
+          _priceToScreenY(tool.centerPrice!));
+    }
+    return null;
+  }
+
+  Offset? _toolEndHandle(DrawingTool tool) {
+    if (tool is TrendLineTool) {
+      if (tool.endIndex == null || tool.endPrice == null) return null;
+      return Offset(
+          _indexToScreenX(tool.endIndex!), _priceToScreenY(tool.endPrice!));
+    }
+    if (tool is TrendAngleTool) {
+      if (tool.endIndex == null || tool.endPrice == null) return null;
+      return Offset(
+          _indexToScreenX(tool.endIndex!), _priceToScreenY(tool.endPrice!));
+    }
+    if (tool is ArrowTool) {
+      if (tool.endIndex == null || tool.endPrice == null) return null;
+      return Offset(
+          _indexToScreenX(tool.endIndex!), _priceToScreenY(tool.endPrice!));
+    }
+    if (tool is RayTool) {
+      if (tool.directionIndex == null || tool.directionPrice == null)
+        return null;
+      return Offset(_indexToScreenX(tool.directionIndex!),
+          _priceToScreenY(tool.directionPrice!));
+    }
+    return null;
+  }
+
+  void _moveSelectedToolStartByDelta(Offset delta) {
+    final tool = _drawingToolManager.selectedTool;
+    if (tool == null) return;
+
+    if (tool is TrendLineTool) {
+      if (tool.startIndex == null || tool.startPrice == null) return;
+      final p = Offset(_indexToScreenX(tool.startIndex!),
+              _priceToScreenY(tool.startPrice!)) +
+          delta;
+      tool.startIndex = _screenXToIndex(p.dx);
+      tool.startPrice = _screenYToPrice(p.dy);
+      return;
+    }
+
+    if (tool is TrendAngleTool) {
+      if (tool.startIndex == null || tool.startPrice == null) return;
+      final p = Offset(_indexToScreenX(tool.startIndex!),
+              _priceToScreenY(tool.startPrice!)) +
+          delta;
+      tool.startIndex = _screenXToIndex(p.dx);
+      tool.startPrice = _screenYToPrice(p.dy);
+      return;
+    }
+
+    if (tool is ArrowTool) {
+      if (tool.startIndex == null || tool.startPrice == null) return;
+      final p = Offset(_indexToScreenX(tool.startIndex!),
+              _priceToScreenY(tool.startPrice!)) +
+          delta;
+      tool.startIndex = _screenXToIndex(p.dx);
+      tool.startPrice = _screenYToPrice(p.dy);
+      return;
+    }
+
+    if (tool is RayTool) {
+      if (tool.startIndex == null || tool.startPrice == null) return;
+      final p = Offset(_indexToScreenX(tool.startIndex!),
+              _priceToScreenY(tool.startPrice!)) +
+          delta;
+      tool.startIndex = _screenXToIndex(p.dx);
+      tool.startPrice = _screenYToPrice(p.dy);
+      return;
+    }
+
+    if (tool is HorizontalRayTool) {
+      if (tool.startIndex == null || tool.startPrice == null) return;
+      final p = Offset(_indexToScreenX(tool.startIndex!),
+              _priceToScreenY(tool.startPrice!)) +
+          delta;
+      tool.startIndex = _screenXToIndex(p.dx);
+      tool.startPrice = _screenYToPrice(p.dy);
+      tool.endIndex = (tool.startIndex ?? 0) + 10;
+      tool.endPrice = tool.startPrice;
+      return;
+    }
+
+    if (tool is VerticalLineTool) {
+      if (tool.lineIndex == null) return;
+      final x = _indexToScreenX(tool.lineIndex!) + delta.dx;
+      tool.lineIndex = _screenXToIndex(x);
+      return;
+    }
+
+    if (tool is HorizontalLineTool) {
+      if (tool.priceLevel == null) return;
+      final y = _priceToScreenY(tool.priceLevel!) + delta.dy;
+      tool.priceLevel = _screenYToPrice(y);
+      return;
+    }
+
+    if (tool is CrossLineTool) {
+      if (tool.centerIndex == null || tool.centerPrice == null) return;
+      final p = Offset(_indexToScreenX(tool.centerIndex!),
+              _priceToScreenY(tool.centerPrice!)) +
+          delta;
+      tool.centerIndex = _screenXToIndex(p.dx);
+      tool.centerPrice = _screenYToPrice(p.dy);
+      return;
+    }
+  }
+
+  void _moveSelectedToolEndByDelta(Offset delta) {
+    final tool = _drawingToolManager.selectedTool;
+    if (tool == null) return;
+
+    if (tool is TrendLineTool) {
+      if (tool.endIndex == null || tool.endPrice == null) return;
+      final p = Offset(_indexToScreenX(tool.endIndex!),
+              _priceToScreenY(tool.endPrice!)) +
+          delta;
+      tool.endIndex = _screenXToIndex(p.dx);
+      tool.endPrice = _screenYToPrice(p.dy);
+      return;
+    }
+
+    if (tool is TrendAngleTool) {
+      if (tool.endIndex == null || tool.endPrice == null) return;
+      final p = Offset(_indexToScreenX(tool.endIndex!),
+              _priceToScreenY(tool.endPrice!)) +
+          delta;
+      tool.endIndex = _screenXToIndex(p.dx);
+      tool.endPrice = _screenYToPrice(p.dy);
+      return;
+    }
+
+    if (tool is ArrowTool) {
+      if (tool.endIndex == null || tool.endPrice == null) return;
+      final p = Offset(_indexToScreenX(tool.endIndex!),
+              _priceToScreenY(tool.endPrice!)) +
+          delta;
+      tool.endIndex = _screenXToIndex(p.dx);
+      tool.endPrice = _screenYToPrice(p.dy);
+      return;
+    }
+
+    if (tool is RayTool) {
+      if (tool.directionIndex == null || tool.directionPrice == null) return;
+      final p = Offset(_indexToScreenX(tool.directionIndex!),
+              _priceToScreenY(tool.directionPrice!)) +
+          delta;
+      tool.directionIndex = _screenXToIndex(p.dx);
+      tool.directionPrice = _screenYToPrice(p.dy);
+      return;
+    }
   }
 
   // 新增：判断是否为单点工具
@@ -903,7 +1498,7 @@ class _KChartWidgetState extends State<KChartWidget>
             _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
         calculateSelectedX: (screenX) =>
             _painter?.calculateSelectedXExtended(screenX) ?? 0,
-        chartRect: _painter?.mMainRect ?? Rect.zero,
+        chartRect: _getMainRectSafe() ?? Rect.zero,
       );
       debugPrint('实时更新终点位置到: $actualPosition');
     }
@@ -939,9 +1534,10 @@ class _KChartWidgetState extends State<KChartWidget>
 
     // 获取正确的边界限制（使用K线图主区域）
     Rect boundary;
-    if (_painter?.mMainRect != null) {
+    final mainRect = _getMainRectSafe();
+    if (mainRect != null) {
       // 使用K线图主区域作为边界
-      boundary = _painter!.mMainRect;
+      boundary = mainRect;
       debugPrint('使用K线图主区域边界: $boundary');
     } else {
       // 后备方案：使用整个组件区域
@@ -1062,7 +1658,7 @@ class _KChartWidgetState extends State<KChartWidget>
                       _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
                   calculateSelectedX: (screenX) =>
                       _painter?.calculateSelectedXExtended(screenX) ?? 0,
-                  chartRect: _painter?.mMainRect ?? Rect.zero,
+                  chartRect: _getMainRectSafe() ?? Rect.zero,
                 );
               }
 
@@ -1082,11 +1678,8 @@ class _KChartWidgetState extends State<KChartWidget>
 
               // 获取边界
               Rect boundary;
-              if (_painter?.mMainRect != null) {
-                boundary = _painter!.mMainRect;
-              } else {
-                boundary = Rect.fromLTWH(0, 0, mWidth, mHeight);
-              }
+              boundary =
+                  _getMainRectSafe() ?? Rect.fromLTWH(0, 0, mWidth, mHeight);
 
               // 预设十字线位置（但不立即生效）
               _drawingCrosshairPosition = Offset(
@@ -1126,7 +1719,7 @@ class _KChartWidgetState extends State<KChartWidget>
                     _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
                 calculateSelectedX: (screenX) =>
                     _painter?.calculateSelectedXExtended(screenX) ?? 0,
-                chartRect: _painter?.mMainRect ?? Rect.zero,
+                chartRect: _getMainRectSafe() ?? Rect.zero,
               );
               notifyChanged();
             }
@@ -1159,7 +1752,7 @@ class _KChartWidgetState extends State<KChartWidget>
                         screenY,
                     calculateSelectedX: (screenX) =>
                         _painter?.calculateSelectedXExtended(screenX) ?? 0,
-                    chartRect: _painter?.mMainRect ?? Rect.zero,
+                    chartRect: _getMainRectSafe() ?? Rect.zero,
                   );
                 }
 
@@ -1178,13 +1771,9 @@ class _KChartWidgetState extends State<KChartWidget>
 
                 // 获取边界
                 Rect boundary;
-                if (_painter?.mMainRect != null) {
-                  boundary = _painter!.mMainRect;
-                } else {
-                  boundary = Rect.fromLTWH(0, 0, mWidth, mHeight);
-                }
+                boundary =
+                    _getMainRectSafe() ?? Rect.fromLTWH(0, 0, mWidth, mHeight);
 
-                // 预设十字线位置（但不立即生效）
                 _drawingCrosshairPosition = Offset(
                   event.localPosition.dx.clamp(boundary.left, boundary.right),
                   event.localPosition.dy.clamp(boundary.top, boundary.bottom),
@@ -1221,7 +1810,7 @@ class _KChartWidgetState extends State<KChartWidget>
                       _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
                   calculateSelectedX: (screenX) =>
                       _painter?.calculateSelectedXExtended(screenX) ?? 0,
-                  chartRect: _painter?.mMainRect ?? Rect.zero,
+                  chartRect: _getMainRectSafe() ?? Rect.zero,
                 );
                 notifyChanged();
               }
@@ -1230,6 +1819,28 @@ class _KChartWidgetState extends State<KChartWidget>
               onTapUp: (details) {
                 if (!isLongPress && !isScale) {
                   _stopAnimation();
+                }
+
+                if (_isDrawingModeEnabled) {
+                  final localPosition = details.localPosition;
+
+                  if (_isDrawingToolMoving) {
+                    _isDrawingToolMoving = false;
+                    _isDrawingToolEditMode = true;
+                    _drawingToolPanelPosition = localPosition;
+                    notifyChanged();
+                    return;
+                  }
+
+                  if (_isDrawingCrosshairMode ||
+                      _drawingToolManager.currentToolType != null) {
+                    _handleDrawingToolTap(localPosition);
+                    return;
+                  }
+
+                  _handleDrawingToolTap(localPosition);
+                  notifyChanged();
+                  return;
                 }
 
                 // 检测是否点击了十字线标签
@@ -1248,21 +1859,6 @@ class _KChartWidgetState extends State<KChartWidget>
                     _painter!.isInMainRect(details.localPosition)) {
                   _hideCrossLine();
                   notifyChanged();
-                  return;
-                }
-
-                // 处理绘图工具的点击事件
-                if (widget.enableDrawingTools && _isDrawingMode) {
-                  final localPosition = details.localPosition;
-
-                  // 如果绘图工具正在移动，则不处理点击事件（避免意外确认）
-                  if (_isDrawingToolMoving) {
-                    debugPrint('绘图工具正在移动，忽略点击事件');
-                    _isDrawingToolMoving = false; // 重置移动状态
-                    return;
-                  }
-
-                  _handleDrawingToolTap(localPosition);
                   return;
                 }
 
@@ -1317,6 +1913,16 @@ class _KChartWidgetState extends State<KChartWidget>
                   return;
                 }
 
+                if (_isDrawingModeEnabled &&
+                    details.pointerCount == 1 &&
+                    _drawingToolManager.currentToolType == null) {
+                  final localPoint = details.localFocalPoint;
+                  if (_beginSelectedToolDrag(localPoint)) {
+                    notifyChanged();
+                    return;
+                  }
+                }
+
                 // 移动端：检查是否为绘图模式
                 if (widget.enableDrawingTools && _isDrawingMode) {
                   // 绘图模式下，处理绘图开始事件
@@ -1353,6 +1959,19 @@ class _KChartWidgetState extends State<KChartWidget>
 
                 // Web端：禁用手势缩放，只允许滚轮缩放
                 if (kIsWeb) {
+                  return;
+                }
+
+                if (_isDrawingModeEnabled &&
+                    _isDrawingToolMoving &&
+                    details.pointerCount == 1) {
+                  final currentLocal = details.localFocalPoint;
+                  final lastLocal = _lastToolDragPosition ?? currentLocal;
+                  final delta = currentLocal - lastLocal;
+                  _lastToolDragPosition = currentLocal;
+                  _updateSelectedToolDrag(delta);
+                  _drawingToolManager.onToolsChanged?.call();
+                  notifyChanged();
                   return;
                 }
 
@@ -1415,6 +2034,13 @@ class _KChartWidgetState extends State<KChartWidget>
                   return;
                 }
 
+                if (_isDrawingModeEnabled && _isDrawingToolMoving) {
+                  _endSelectedToolDrag();
+                  _drawingToolManager.onToolsChanged?.call();
+                  notifyChanged();
+                  return;
+                }
+
                 // 绘图模式下的处理
                 if (widget.enableDrawingTools && _isDrawingMode) {
                   _handleDrawingPanEnd();
@@ -1432,6 +2058,9 @@ class _KChartWidgetState extends State<KChartWidget>
                 _onDragChanged(false);
               },
               onLongPressStart: (details) {
+                if (_isDrawingModeEnabled) {
+                  return;
+                }
                 isOnTap = false;
                 isLongPress = true;
                 _showCrossLine(); // 显示十字线并取消延迟隐藏
@@ -1469,6 +2098,9 @@ class _KChartWidgetState extends State<KChartWidget>
                 }
               },
               onLongPressMoveUpdate: (details) {
+                if (_isDrawingModeEnabled) {
+                  return;
+                }
                 _showCrossLine(); // 移动时继续显示十字线并取消延迟隐藏
                 if ((mSelectX !=
                             _snapCrosshairToCandleCenterX(
@@ -1504,6 +2136,9 @@ class _KChartWidgetState extends State<KChartWidget>
                 }
               },
               onLongPressEnd: (details) {
+                if (_isDrawingModeEnabled) {
+                  return;
+                }
                 isLongPress = false;
                 enableCordRecord = true;
                 _startCrossLineHideTimer(); // 开始延迟隐藏十字线
@@ -1516,6 +2151,17 @@ class _KChartWidgetState extends State<KChartWidget>
                     size: Size(double.infinity, double.infinity),
                     painter: _painter,
                   ),
+                  if (_isDrawingModeEnabled &&
+                      _drawingToolManager.selectedTool != null &&
+                      !_isDrawingCrosshairMode)
+                    Positioned.fill(
+                      child: DrawingToolHandleOverlay(
+                        tool: _drawingToolManager.selectedTool!,
+                        getX: _indexToScreenX,
+                        getY: _priceToScreenY,
+                        chartRect: _getMainRectSafe(),
+                      ),
+                    ),
                   if (widget.watermark != null)
                     Positioned.fill(
                       child: IgnorePointer(
@@ -1538,12 +2184,40 @@ class _KChartWidgetState extends State<KChartWidget>
                     DrawingCrosshair(
                       position: _drawingCrosshairPosition!,
                       chartSize: Size(mWidth, mHeight),
+                      chartRect: _getMainRectSafe(),
                       isSelectingStartPoint: _isSelectingStartPoint,
                       isSelectingEndPoint: _isSelectingEndPoint,
-                      color: Colors.orange,
+                      color: _drawingToolManager.currentColor,
                       strokeWidth: 1.5,
                     ),
-                  if (widget.showInfoDialog) _buildInfoDialog(),
+                  if (_isDrawingModeEnabled &&
+                      _isDrawingToolEditMode &&
+                      _selectedDrawingTool != null &&
+                      _drawingToolPanelPosition != null)
+                    Positioned(
+                      left: (_drawingToolPanelPosition!.dx - 90)
+                          .clamp(
+                              8.0, (mWidth - 220).clamp(8.0, double.infinity))
+                          .toDouble(),
+                      top: (_drawingToolPanelPosition!.dy - 60)
+                          .clamp(
+                              8.0, (mHeight - 52).clamp(8.0, double.infinity))
+                          .toDouble(),
+                      child: DrawingToolQuickPanel(
+                        manager: _drawingToolManager,
+                        tool: _selectedDrawingTool!,
+                        onDelete: () {
+                          setState(() {
+                            _isDrawingToolEditMode = false;
+                            _drawingToolPanelPosition = null;
+                            _selectedDrawingTool = null;
+                          });
+                          _drawingToolManager.deleteSelectedTool();
+                        },
+                      ),
+                    ),
+                  if (widget.showInfoDialog && !_isDrawingModeEnabled)
+                    _buildInfoDialog(),
                 ],
               ),
             ), // 关闭MouseRegion

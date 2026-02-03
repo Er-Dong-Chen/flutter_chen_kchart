@@ -350,8 +350,7 @@ class DepthChartPainter extends CustomPainter {
     }
     Rect bottomRect = Rect.fromLTRB(left - 3, mDrawHeight,
         left + priceTP.width + 3, mDrawHeight + mPaddingBottom);
-    final bottomRRect =
-        RRect.fromRectAndRadius(bottomRect, Radius.circular(4));
+    final bottomRRect = RRect.fromRectAndRadius(bottomRect, Radius.circular(4));
     canvas.drawRRect(bottomRRect, selectPaint!);
     canvas.drawRRect(bottomRRect, selectBorderPaint!);
     priceTP.paint(
@@ -373,8 +372,7 @@ class DepthChartPainter extends CustomPainter {
     }
     Rect rightRect = Rect.fromLTRB(mWidth - amountTP.width - 6,
         rightRectTop - 3, mWidth, rightRectTop + amountTP.height + 3);
-    final rightRRect =
-        RRect.fromRectAndRadius(rightRect, Radius.circular(4));
+    final rightRRect = RRect.fromRectAndRadius(rightRect, Radius.circular(4));
     canvas.drawRRect(rightRRect, selectPaint!);
     canvas.drawRRect(rightRRect, selectBorderPaint!);
     amountTP.paint(

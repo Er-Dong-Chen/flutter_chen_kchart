@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 class DrawingCrosshair extends StatelessWidget {
   final Offset position;
   final Size chartSize;
+  final Rect? chartRect;
   final bool isSelectingStartPoint;
   final bool isSelectingEndPoint;
   final Color color;
@@ -13,6 +14,7 @@ class DrawingCrosshair extends StatelessWidget {
     Key? key,
     required this.position,
     required this.chartSize,
+    this.chartRect,
     this.isSelectingStartPoint = false,
     this.isSelectingEndPoint = false,
     this.color = Colors.orange,
@@ -25,6 +27,7 @@ class DrawingCrosshair extends StatelessWidget {
       size: chartSize,
       painter: DrawingCrosshairPainter(
         position: position,
+        chartRect: chartRect,
         isSelectingStartPoint: isSelectingStartPoint,
         isSelectingEndPoint: isSelectingEndPoint,
         color: color,
@@ -37,6 +40,7 @@ class DrawingCrosshair extends StatelessWidget {
 /// 绘图十字线画笔
 class DrawingCrosshairPainter extends CustomPainter {
   final Offset position;
+  final Rect? chartRect;
   final bool isSelectingStartPoint;
   final bool isSelectingEndPoint;
   final Color color;
@@ -44,6 +48,7 @@ class DrawingCrosshairPainter extends CustomPainter {
 
   DrawingCrosshairPainter({
     required this.position,
+    required this.chartRect,
     required this.isSelectingStartPoint,
     required this.isSelectingEndPoint,
     required this.color,
@@ -52,7 +57,7 @@ class DrawingCrosshairPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
+    final linePaint = Paint()
       ..color = color
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
@@ -61,36 +66,38 @@ class DrawingCrosshairPainter extends CustomPainter {
     // 绘制垂直线
     _drawDashedLine(
       canvas,
-      Offset(position.dx, 0),
-      Offset(position.dx, size.height),
-      paint,
+      Offset(position.dx, chartRect?.top ?? 0),
+      Offset(position.dx, chartRect?.bottom ?? size.height),
+      linePaint,
     );
 
     // 绘制水平线
     _drawDashedLine(
       canvas,
-      Offset(0, position.dy),
-      Offset(size.width, position.dy),
-      paint,
+      Offset(chartRect?.left ?? 0, position.dy),
+      Offset(chartRect?.right ?? size.width, position.dy),
+      linePaint,
     );
 
-    // 绘制中心圆圈
-    final centerPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    canvas.drawCircle(position, 4.0, centerPaint);
-
-    // 绘制外圈（空心）
     final outerPaint = Paint()
-      ..color = color
+      ..color = color.withValues(alpha: 0.85)
       ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
+      ..style = PaintingStyle.stroke
+      ..isAntiAlias = true;
 
-    canvas.drawCircle(position, 8.0, outerPaint);
+    final innerFillPaint = Paint()
+      ..color = color.withValues(alpha: 0.18)
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
 
-    // 绘制状态指示文本
-    _drawStatusText(canvas, size);
+    final dotPaint = Paint()
+      ..color = color.withValues(alpha: 1.0)
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    canvas.drawCircle(position, 10.0, innerFillPaint);
+    canvas.drawCircle(position, 10.0, outerPaint);
+    canvas.drawCircle(position, 2.2, dotPaint);
   }
 
   /// 绘制虚线
@@ -118,71 +125,6 @@ class DrawingCrosshairPainter extends CustomPainter {
       currentDistance = nextDistance;
       drawDash = !drawDash;
     }
-  }
-
-  /// 绘制状态指示文本
-  void _drawStatusText(Canvas canvas, Size size) {
-    String statusText = '';
-    if (isSelectingStartPoint) {
-      statusText = '选择起点';
-    } else if (isSelectingEndPoint) {
-      statusText = '选择终点';
-    } else {
-      statusText = '选择位置';
-    }
-
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: statusText,
-        style: TextStyle(
-          color: color,
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          shadows: [
-            Shadow(
-              offset: Offset(1, 1),
-              blurRadius: 2,
-              color: Colors.black.withValues(alpha: 0.5),
-            ),
-          ],
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-
-    textPainter.layout();
-
-    // 计算文本位置（在十字线右上角）
-    double textX = position.dx + 15;
-    double textY = position.dy - 25;
-
-    // 确保文本不超出边界
-    if (textX + textPainter.width > size.width) {
-      textX = position.dx - textPainter.width - 15;
-    }
-    if (textY < 0) {
-      textY = position.dy + 15;
-    }
-
-    // 绘制文本背景
-    final bgRect = Rect.fromLTWH(
-      textX - 4,
-      textY - 2,
-      textPainter.width + 8,
-      textPainter.height + 4,
-    );
-
-    final bgPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.7)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(bgRect, Radius.circular(4)),
-      bgPaint,
-    );
-
-    // 绘制文本
-    textPainter.paint(canvas, Offset(textX, textY));
   }
 
   @override

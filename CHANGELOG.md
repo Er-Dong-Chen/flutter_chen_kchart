@@ -1,3 +1,10 @@
+## 3.0.0
+* Chore: Optimize and restructure the graphics
+* Improved: Optimize the drawing tools
+* Improved: Optimize drawing and plotting
+* Added: Drawing Floating Toolbar Settings
+* Added: Drawing lines move and reposition to the initial position
+
 ## 2.8.0
 * Improved: style
 

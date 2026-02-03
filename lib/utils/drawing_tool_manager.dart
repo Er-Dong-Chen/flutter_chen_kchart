@@ -27,6 +27,7 @@ class DrawingToolManager {
   // 当前绘图工具的属性
   Color _currentColor = const Color(0xFFFFD700);
   double _currentStrokeWidth = 2.0;
+  DrawingLineStyle _currentLineStyle = DrawingLineStyle.solid;
 
   // 事件回调
   VoidCallback? onToolsChanged;
@@ -56,6 +57,8 @@ class DrawingToolManager {
 
   // 获取当前线条粗细
   double get currentStrokeWidth => _currentStrokeWidth;
+
+  DrawingLineStyle get currentLineStyle => _currentLineStyle;
 
   // 初始化
   DrawingToolManager() {
@@ -96,6 +99,14 @@ class DrawingToolManager {
     // 如果有选中的工具，更新其线条粗细
     if (_selectedTool != null) {
       _selectedTool!.strokeWidth = width;
+      onToolsChanged?.call();
+    }
+  }
+
+  void setCurrentLineStyle(DrawingLineStyle style) {
+    _currentLineStyle = style;
+    if (_selectedTool != null) {
+      _selectedTool!.lineStyle = style;
       onToolsChanged?.call();
     }
   }
@@ -288,6 +299,7 @@ class DrawingToolManager {
     }
 
     if (_currentDrawingTool != null) {
+      _currentDrawingTool!.lineStyle = _currentLineStyle;
       // 只有在工具状态不是drawing的情况下才设置为drawing
       // 因为单点工具已经在创建时设置了正确的状态
       if (_currentDrawingTool!.state == DrawingToolState.none) {
@@ -448,12 +460,20 @@ class DrawingToolManager {
       if (_currentDrawingTool!.isComplete) {
         // 将工具状态设置为正常状态（非预览状态）
         _currentDrawingTool!.state = DrawingToolState.none;
-        _tools.add(_currentDrawingTool!);
+        final completedTool = _currentDrawingTool!;
+        _tools.add(completedTool);
         debugPrint('绘图工具已添加，总数: ${_tools.length}');
 
         // 重要：清除当前绘制工具，这样预览线就会消失
         _currentDrawingTool = null;
         _updateDrawingPosition(null);
+        _clearSelection();
+        _selectedTool = completedTool;
+        _selectedTool!.state = DrawingToolState.selected;
+        _currentColor = _selectedTool!.color;
+        _currentStrokeWidth = _selectedTool!.strokeWidth;
+        _currentLineStyle = _selectedTool!.lineStyle;
+        onToolSelected?.call(_selectedTool);
         _handleToolCompletion();
       } else {
         debugPrint('工具未完成，无法添加到工具列表');
@@ -497,6 +517,7 @@ class DrawingToolManager {
         // 更新当前颜色和线条粗细为选中工具的属性
         _currentColor = _selectedTool!.color;
         _currentStrokeWidth = _selectedTool!.strokeWidth;
+        _currentLineStyle = _selectedTool!.lineStyle;
 
         onToolSelected?.call(_selectedTool);
         debugPrint('选中工具: ${tool.type}, id: ${tool.id}');
@@ -533,8 +554,136 @@ class DrawingToolManager {
         _selectedTool = null;
         onToolSelected?.call(null);
       }
-      _notifyToolsChanged();
     }
+
+    _notifyToolsChanged();
+  }
+
+  void selectToolAt(
+    Offset point, {
+    required double Function(double) getX,
+    required double Function(double) getY,
+  }) {
+    debugPrint('DrawingToolManager.selectToolAt at $point');
+    _clearSelection();
+
+    for (int i = _tools.length - 1; i >= 0; i--) {
+      final tool = _tools[i];
+      if (!tool.isVisible) continue;
+      if (_hitTestTool(tool, point, getX: getX, getY: getY)) {
+        _selectedTool = tool;
+        _selectedTool!.state = DrawingToolState.selected;
+        _currentColor = _selectedTool!.color;
+        _currentStrokeWidth = _selectedTool!.strokeWidth;
+        _currentLineStyle = _selectedTool!.lineStyle;
+        onToolSelected?.call(_selectedTool);
+        break;
+      }
+    }
+
+    _notifyToolsChanged();
+  }
+
+  bool _hitTestTool(
+    DrawingTool tool,
+    Offset point, {
+    required double Function(double) getX,
+    required double Function(double) getY,
+  }) {
+    final tolerance = max(6.0, tool.strokeWidth * 2.0);
+
+    if (tool is VerticalLineTool) {
+      if (tool.lineIndex == null) return false;
+      final x = getX(tool.lineIndex!);
+      return (point.dx - x).abs() <= tolerance;
+    }
+
+    if (tool is HorizontalLineTool) {
+      if (tool.priceLevel == null) return false;
+      final y = getY(tool.priceLevel!);
+      return (point.dy - y).abs() <= tolerance;
+    }
+
+    if (tool is HorizontalRayTool) {
+      if (tool.startIndex == null || tool.startPrice == null) return false;
+      final x0 = getX(tool.startIndex!);
+      final y0 = getY(tool.startPrice!);
+      if (point.dx < x0 - tolerance) return false;
+      return (point.dy - y0).abs() <= tolerance;
+    }
+
+    if (tool is TrendLineTool) {
+      if (tool.startIndex == null ||
+          tool.startPrice == null ||
+          tool.endIndex == null ||
+          tool.endPrice == null) return false;
+      final a = Offset(getX(tool.startIndex!), getY(tool.startPrice!));
+      final b = Offset(getX(tool.endIndex!), getY(tool.endPrice!));
+      return _distanceToSegment(point, a, b) <= tolerance;
+    }
+
+    if (tool is TrendAngleTool) {
+      if (tool.startIndex == null ||
+          tool.startPrice == null ||
+          tool.endIndex == null ||
+          tool.endPrice == null) return false;
+      final a = Offset(getX(tool.startIndex!), getY(tool.startPrice!));
+      final b = Offset(getX(tool.endIndex!), getY(tool.endPrice!));
+      return _distanceToSegment(point, a, b) <= tolerance;
+    }
+
+    if (tool is ArrowTool) {
+      if (tool.startIndex == null ||
+          tool.startPrice == null ||
+          tool.endIndex == null ||
+          tool.endPrice == null) return false;
+      final a = Offset(getX(tool.startIndex!), getY(tool.startPrice!));
+      final b = Offset(getX(tool.endIndex!), getY(tool.endPrice!));
+      return _distanceToSegment(point, a, b) <= tolerance;
+    }
+
+    if (tool is RayTool) {
+      if (tool.startIndex == null ||
+          tool.startPrice == null ||
+          tool.directionIndex == null ||
+          tool.directionPrice == null) return false;
+      final a = Offset(getX(tool.startIndex!), getY(tool.startPrice!));
+      final b = Offset(getX(tool.directionIndex!), getY(tool.directionPrice!));
+      return _distanceToRay(point, a, b) <= tolerance;
+    }
+
+    if (tool is CrossLineTool) {
+      if (tool.centerIndex == null || tool.centerPrice == null) return false;
+      final cx = getX(tool.centerIndex!);
+      final cy = getY(tool.centerPrice!);
+      final dx = (point.dx - cx).abs();
+      final dy = (point.dy - cy).abs();
+      return dx <= tolerance || dy <= tolerance;
+    }
+
+    return tool.hitTest(point);
+  }
+
+  double _distanceToSegment(Offset p, Offset a, Offset b) {
+    final ab = b - a;
+    final ap = p - a;
+    final abLen2 = ab.dx * ab.dx + ab.dy * ab.dy;
+    if (abLen2 == 0) return (p - a).distance;
+    var t = (ap.dx * ab.dx + ap.dy * ab.dy) / abLen2;
+    t = t.clamp(0.0, 1.0);
+    final proj = Offset(a.dx + ab.dx * t, a.dy + ab.dy * t);
+    return (p - proj).distance;
+  }
+
+  double _distanceToRay(Offset p, Offset a, Offset b) {
+    final dir = b - a;
+    final ap = p - a;
+    final dirLen2 = dir.dx * dir.dx + dir.dy * dir.dy;
+    if (dirLen2 == 0) return (p - a).distance;
+    final t = (ap.dx * dir.dx + ap.dy * dir.dy) / dirLen2;
+    if (t <= 0) return (p - a).distance;
+    final proj = Offset(a.dx + dir.dx * t, a.dy + dir.dy * t);
+    return (p - proj).distance;
   }
 
   // 清除所有工具
