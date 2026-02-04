@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_chen_common/flutter_chen_common.dart';
 import 'package:flutter_chen_kchart/k_chart.dart' hide S;
+import 'package:flutter_chen_kchart/utils/kchart_log.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
@@ -85,7 +87,7 @@ class _KChartViewState extends State<KChartView> {
         if (mounted) {
           setState(() {
             // 工具选中时的状态更新
-            debugPrint('选中绘图工具: ${tool?.displayName ?? "无"}');
+            kchartLog('选中绘图工具: ${tool?.displayName ?? "无"}');
           });
         }
       };
@@ -95,7 +97,7 @@ class _KChartViewState extends State<KChartView> {
       _isDrawingMode = false;
       _currentDrawingTool = null;
 
-      debugPrint('绘图工具管理器初始化完成');
+      kchartLog('绘图工具管理器初始化完成');
     }
 
     fetchKline(false);
@@ -178,7 +180,7 @@ class _KChartViewState extends State<KChartView> {
         });
       }
     } catch (e) {
-      debugPrint('获取深度数据失败: $e');
+      kchartLog('获取深度数据失败: $e');
     }
   }
 
@@ -246,7 +248,7 @@ class _KChartViewState extends State<KChartView> {
         setState(() => isLoading = false);
       }
     } catch (e) {
-      debugPrint('获取K线数据失败: $e');
+      log('获取K线数据失败: $e');
       if (mounted) {
         setState(() {
           isLoading = false;
@@ -290,7 +292,7 @@ class _KChartViewState extends State<KChartView> {
         setState(() {});
       }
     } catch (e) {
-      debugPrint('更新最新K线数据失败: $e');
+      kchartLog('更新最新K线数据失败: $e');
     }
   }
 
@@ -336,19 +338,19 @@ class _KChartViewState extends State<KChartView> {
         _isDrawingMode = false;
         _drawingToolManager!.setCurrentToolType(null);
         _drawingToolManager!.modeManager.setDrawingMode(false);
-        debugPrint('取消绘图工具: $toolType');
+        kchartLog('取消绘图工具: $toolType');
       } else {
         // 切换到新的绘图工具
         _currentDrawingTool = toolType;
         _isDrawingMode = toolType != null;
         _drawingToolManager!.setCurrentToolType(toolType);
         _drawingToolManager!.modeManager.setDrawingMode(toolType != null);
-        debugPrint('选择绘图工具: $toolType');
+        kchartLog('选择绘图工具: $toolType');
       }
 
       // 同步当前工具状态
       if (toolType != null) {
-        debugPrint('绘图模式: $_isDrawingMode, 当前工具: $_currentDrawingTool');
+        kchartLog('绘图模式: $_isDrawingMode, 当前工具: $_currentDrawingTool');
       }
     });
   }
@@ -356,14 +358,7 @@ class _KChartViewState extends State<KChartView> {
   void _clearAllDrawings() {
     if (_drawingToolManager == null) return;
     _drawingToolManager!.clearAllTools();
-    debugPrint('清除所有绘图工具');
-    setState(() {}); // 强制刷新UI
-  }
-
-  void _deleteSelectedDrawing() {
-    if (_drawingToolManager == null) return;
-    _drawingToolManager!.deleteSelectedTool();
-    debugPrint('删除选中的绘图工具');
+    kchartLog('清除所有绘图工具');
     setState(() {}); // 强制刷新UI
   }
 
@@ -378,9 +373,9 @@ class _KChartViewState extends State<KChartView> {
         // 关闭绘图模式时，清除当前工具
         _currentDrawingTool = null;
         _drawingToolManager!.setCurrentToolType(null);
-        debugPrint('关闭绘图模式');
+        kchartLog('关闭绘图模式');
       } else {
-        debugPrint('开启绘图模式');
+        kchartLog('开启绘图模式');
       }
     });
   }
@@ -390,8 +385,7 @@ class _KChartViewState extends State<KChartView> {
 
     setState(() {
       _drawingToolManager!.modeManager.toggleContinuousMode();
-      debugPrint(
-          '连续绘图模式: ${_drawingToolManager!.modeManager.isContinuousMode}');
+      kchartLog('连续绘图模式: ${_drawingToolManager!.modeManager.isContinuousMode}');
     });
   }
 
@@ -400,7 +394,7 @@ class _KChartViewState extends State<KChartView> {
 
     setState(() {
       _drawingToolManager!.modeManager.toggleMagnetMode();
-      debugPrint('磁铁吸附模式: ${_drawingToolManager!.modeManager.isMagnetMode}');
+      kchartLog('磁铁吸附模式: ${_drawingToolManager!.modeManager.isMagnetMode}');
     });
   }
 
@@ -413,7 +407,7 @@ class _KChartViewState extends State<KChartView> {
       for (var tool in _drawingToolManager!.tools) {
         tool.isVisible = _isDrawingVisible;
       }
-      debugPrint('绘图可见性: $_isDrawingVisible');
+      kchartLog('绘图可见性: $_isDrawingVisible');
     });
   }
 
@@ -673,33 +667,6 @@ class _KChartViewState extends State<KChartView> {
     );
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required String tooltip,
-    required VoidCallback onPressed,
-    required Color color,
-    bool isDestructive = false,
-  }) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 2.w),
-      child: IconButton(
-        onPressed: onPressed,
-        icon: Icon(icon, size: 18.sp),
-        tooltip: tooltip,
-        style: IconButton.styleFrom(
-          backgroundColor:
-              isDestructive ? color.withOpacity(0.1) : Colors.transparent,
-          foregroundColor: color,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(6.r),
-          ),
-          padding: EdgeInsets.all(8.w),
-          minimumSize: Size(36.w, 36.h),
-        ),
-      ),
-    );
-  }
-
   String _getToolDisplayName(DrawingToolType toolType) {
     switch (toolType) {
       case DrawingToolType.trendLine:
@@ -718,8 +685,6 @@ class _KChartViewState extends State<KChartView> {
         return '射线';
       case DrawingToolType.crossLine:
         return '十字线';
-      default:
-        return '未知工具';
     }
   }
 
@@ -741,8 +706,6 @@ class _KChartViewState extends State<KChartView> {
         return '点击并拖动以绘制射线。';
       case DrawingToolType.crossLine:
         return '点击并拖动以绘制十字线。';
-      default:
-        return '请选择一个绘图工具。';
     }
   }
 

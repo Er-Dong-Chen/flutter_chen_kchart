@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../entity/k_line_entity.dart';
+import 'kchart_log.dart';
 
 /// 绘图模式管理器
 /// 负责管理绘图工具的各种模式状态和辅助功能
@@ -20,7 +21,6 @@ class DrawingModeManager {
   /// 切换绘图模式总开关
   void toggleDrawingMode() {
     _isDrawingModeEnabled = !_isDrawingModeEnabled;
-    debugPrint('绘图模式已${_isDrawingModeEnabled ? "启用" : "禁用"}');
     _notifyModeChanged();
   }
 
@@ -28,7 +28,6 @@ class DrawingModeManager {
   void setDrawingMode(bool enabled) {
     if (_isDrawingModeEnabled != enabled) {
       _isDrawingModeEnabled = enabled;
-      debugPrint('绘图模式设置为: ${enabled ? "启用" : "禁用"}');
       _notifyModeChanged();
     }
   }
@@ -36,7 +35,6 @@ class DrawingModeManager {
   /// 切换持续绘图模式
   void toggleContinuousMode() {
     _isContinuousMode = !_isContinuousMode;
-    debugPrint('持续绘图模式已${_isContinuousMode ? "启用" : "禁用"}');
     _notifyModeChanged();
   }
 
@@ -44,7 +42,6 @@ class DrawingModeManager {
   void setContinuousMode(bool enabled) {
     if (_isContinuousMode != enabled) {
       _isContinuousMode = enabled;
-      debugPrint('持续绘图模式设置为: ${enabled ? "启用" : "禁用"}');
       _notifyModeChanged();
     }
   }
@@ -52,7 +49,6 @@ class DrawingModeManager {
   /// 切换磁铁模式
   void toggleMagnetMode() {
     _isMagnetMode = !_isMagnetMode;
-    debugPrint('磁铁模式已${_isMagnetMode ? "启用" : "禁用"}');
     _notifyModeChanged();
   }
 
@@ -60,7 +56,6 @@ class DrawingModeManager {
   void setMagnetMode(bool enabled) {
     if (_isMagnetMode != enabled) {
       _isMagnetMode = enabled;
-      debugPrint('磁铁模式设置为: ${enabled ? "启用" : "禁用"}');
       _notifyModeChanged();
     }
   }
@@ -127,12 +122,10 @@ class DrawingModeManager {
       // 只有在合理距离内才吸附（比如50像素内）
       const double snapThreshold = 50.0;
       if (minDistance <= snapThreshold) {
-        debugPrint(
-            '磁铁吸附: 从 $point 吸附到 $snapPoint (距离: ${minDistance.toStringAsFixed(1)})');
         return snapPoint;
       }
-    } catch (e) {
-      debugPrint('磁铁吸附计算错误: $e');
+    } catch (e, s) {
+      kchartLog('磁铁吸附计算错误: $e', error: e, stackTrace: s);
     }
 
     return point;
@@ -148,7 +141,6 @@ class DrawingModeManager {
     _isDrawingModeEnabled = false;
     _isContinuousMode = false;
     _isMagnetMode = false;
-    debugPrint('所有绘图模式已重置');
     _notifyModeChanged();
   }
 

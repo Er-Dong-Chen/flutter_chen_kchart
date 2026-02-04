@@ -4,6 +4,16 @@ import '../entity/drawing_tool_entity.dart';
 import '../entity/k_line_entity.dart';
 import 'drawing_mode_manager.dart';
 
+import 'kchart_log.dart';
+
+const bool _kChartVerboseLogEnabled = false;
+
+void _logV(Object? message) {
+  if (_kChartVerboseLogEnabled) {
+    kchartLog(message);
+  }
+}
+
 // 绘图工具管理器
 class DrawingToolManager {
   // 所有绘图工具列表
@@ -63,15 +73,14 @@ class DrawingToolManager {
   // 初始化
   DrawingToolManager() {
     _modeManager.onModeChanged = () {
-      debugPrint('绘图模式变化: ${_modeManager.getModeDescription()}');
+      _logV('绘图模式变化: ${_modeManager.getModeDescription()}');
       onToolsChanged?.call();
     };
   }
 
   // 设置当前工具类型
   void setCurrentToolType(DrawingToolType? type) {
-    debugPrint(
-        'DrawingToolManager.setCurrentToolType: $_currentToolType -> $type');
+    _logV('DrawingToolManager.setCurrentToolType: $_currentToolType -> $type');
 
     // 如果设置新工具类型，自动启用绘图模式
     if (type != null && !_modeManager.isDrawingModeEnabled) {
@@ -124,7 +133,7 @@ class DrawingToolManager {
         calculateSelectedX, // 新增：屏幕X转索引的函数（直接使用BaseChartPainter的方法）
     Rect? chartRect,
   }) {
-    debugPrint('DrawingToolManager.startDrawing: $_currentToolType at $point');
+    _logV('DrawingToolManager.startDrawing: $_currentToolType at $point');
     if (_currentToolType == null || !_modeManager.isDrawingModeEnabled) return;
 
     _finishCurrentDrawing();
@@ -159,25 +168,25 @@ class DrawingToolManager {
         int selectedIndex = calculateSelectedX(adjustedPoint.dx);
         logicalIndex = selectedIndex.toDouble();
         logicalPrice = getPriceFromY(adjustedPoint.dy);
-        debugPrint(
+        _logV(
             'startDrawing坐标转换: 屏幕点($adjustedPoint) -> selectedIndex=$selectedIndex, 索引($logicalIndex), 价格($logicalPrice)');
 
         // 验证数据有效性
         if (logicalIndex.isNaN || logicalIndex.isInfinite) {
-          debugPrint('警告: logicalIndex无效: $logicalIndex');
+          _logV('警告: logicalIndex无效: $logicalIndex');
           logicalIndex = null;
         }
         if (logicalPrice.isNaN || logicalPrice.isInfinite) {
-          debugPrint('警告: logicalPrice无效: $logicalPrice');
+          _logV('警告: logicalPrice无效: $logicalPrice');
           logicalPrice = null;
         }
-      } catch (e) {
-        debugPrint('startDrawing坐标转换错误: $e');
+      } catch (e, s) {
+        kchartLog('startDrawing坐标转换错误: $e', error: e, stackTrace: s);
         logicalIndex = null;
         logicalPrice = null;
       }
     } else {
-      debugPrint(
+      _logV(
           '坐标转换函数为null: calculateSelectedX=$calculateSelectedX, getPriceFromY=$getPriceFromY');
     }
 
@@ -190,7 +199,7 @@ class DrawingToolManager {
           color: _currentColor,
           strokeWidth: _currentStrokeWidth,
         );
-        debugPrint(
+        _logV(
             '创建趋势线工具: 逻辑坐标=($logicalIndex, $logicalPrice), isComplete=${_currentDrawingTool!.isComplete}');
         // 趋势线工具改为预览模式，等待设置终点
         _currentDrawingTool!.state = DrawingToolState.drawing;
@@ -204,12 +213,12 @@ class DrawingToolManager {
           color: _currentColor,
           strokeWidth: _currentStrokeWidth,
         );
-        debugPrint(
+        _logV(
             '创建趋势角度工具: 逻辑坐标=($logicalIndex, $logicalPrice), isComplete=${_currentDrawingTool!.isComplete}');
         // 趋势角度工具改为预览模式，等待设置终点
         _currentDrawingTool!.state = DrawingToolState.drawing;
         _updateDrawingPosition(adjustedPoint);
-        debugPrint(
+        _logV(
             '创建趋势角度工具: startPoint=$adjustedPoint, isComplete=${_currentDrawingTool!.isComplete}');
         break;
       case DrawingToolType.arrow:
@@ -220,7 +229,7 @@ class DrawingToolManager {
           color: _currentColor,
           strokeWidth: _currentStrokeWidth,
         );
-        debugPrint(
+        _logV(
             '创建箭头工具: 逻辑坐标=($logicalIndex, $logicalPrice), isComplete=${_currentDrawingTool!.isComplete}');
         // 箭头工具改为预览模式，等待设置终点
         _currentDrawingTool!.state = DrawingToolState.drawing;
@@ -233,7 +242,7 @@ class DrawingToolManager {
           color: _currentColor,
           strokeWidth: _currentStrokeWidth,
         );
-        debugPrint(
+        _logV(
             '创建垂直线工具: 逻辑坐标=($logicalIndex), isComplete=${_currentDrawingTool!.isComplete}');
         // 垂直线工具立即完成
         break;
@@ -244,7 +253,7 @@ class DrawingToolManager {
           color: _currentColor,
           strokeWidth: _currentStrokeWidth,
         );
-        debugPrint(
+        _logV(
             '创建水平线工具: 逻辑坐标=($logicalPrice), isComplete=${_currentDrawingTool!.isComplete}');
         // 水平线工具立即完成
         break;
@@ -258,7 +267,7 @@ class DrawingToolManager {
           color: _currentColor,
           strokeWidth: _currentStrokeWidth,
         );
-        debugPrint(
+        _logV(
             '创建水平射线工具: 逻辑坐标=($logicalIndex, $logicalPrice), isComplete=${_currentDrawingTool!.isComplete}');
         // 水平射线工具立即完成，无需第二次点击
         break;
@@ -270,12 +279,12 @@ class DrawingToolManager {
           color: _currentColor,
           strokeWidth: _currentStrokeWidth,
         );
-        debugPrint(
+        _logV(
             '创建射线工具: 逻辑坐标=($logicalIndex, $logicalPrice), isComplete=${_currentDrawingTool!.isComplete}');
         // 射线工具改为预览模式，等待设置方向点
         _currentDrawingTool!.state = DrawingToolState.drawing;
         _updateDrawingPosition(adjustedPoint);
-        debugPrint(
+        _logV(
             '创建射线工具: startPoint=$adjustedPoint, isComplete=${_currentDrawingTool!.isComplete}');
         // 射线工具改为预览模式，等待确定方向
         _currentDrawingTool!.state = DrawingToolState.drawing;
@@ -289,7 +298,7 @@ class DrawingToolManager {
           color: _currentColor,
           strokeWidth: _currentStrokeWidth,
         );
-        debugPrint(
+        _logV(
             '创建十字线工具: 逻辑坐标=($logicalIndex, $logicalPrice), isComplete=${_currentDrawingTool!.isComplete}');
         // 十字线工具立即完成
         // 十字线工具改为预览模式，不立即完成
@@ -307,7 +316,7 @@ class DrawingToolManager {
       }
       _updateDrawingPosition(adjustedPoint);
       _notifyToolsChanged();
-      debugPrint(
+      _logV(
           '工具创建完成: state=${_currentDrawingTool!.state}, isComplete=${_currentDrawingTool!.isComplete}');
     }
   }
@@ -355,25 +364,25 @@ class DrawingToolManager {
         int selectedIndex = calculateSelectedX(adjustedPoint.dx);
         logicalIndex = selectedIndex.toDouble();
         logicalPrice = getPriceFromY(adjustedPoint.dy);
-        debugPrint(
+        _logV(
             'updateDrawing坐标转换: 屏幕点($adjustedPoint) -> selectedIndex=$selectedIndex, 索引($logicalIndex), 价格($logicalPrice)');
 
         // 验证数据有效性
         if (logicalIndex.isNaN || logicalIndex.isInfinite) {
-          debugPrint('警告: updateDrawing logicalIndex无效: $logicalIndex');
+          _logV('警告: updateDrawing logicalIndex无效: $logicalIndex');
           logicalIndex = null;
         }
         if (logicalPrice.isNaN || logicalPrice.isInfinite) {
-          debugPrint('警告: updateDrawing logicalPrice无效: $logicalPrice');
+          _logV('警告: updateDrawing logicalPrice无效: $logicalPrice');
           logicalPrice = null;
         }
-      } catch (e) {
-        debugPrint('updateDrawing坐标转换错误: $e');
+      } catch (e, s) {
+        kchartLog('updateDrawing坐标转换错误: $e', error: e, stackTrace: s);
         logicalIndex = null;
         logicalPrice = null;
       }
     } else {
-      debugPrint(
+      _logV(
           'updateDrawing坐标转换函数为null: calculateSelectedX=$calculateSelectedX, getPriceFromY=$getPriceFromY');
     }
 
@@ -382,12 +391,12 @@ class DrawingToolManager {
         final tool = _currentDrawingTool as TrendLineTool;
         tool.endIndex = logicalIndex; // 设置逻辑坐标
         tool.endPrice = logicalPrice; // 设置逻辑坐标
-        debugPrint(
+        _logV(
             'TrendLineTool更新后数据: startIndex=${tool.startIndex}, startPrice=${tool.startPrice}, endIndex=${tool.endIndex}, endPrice=${tool.endPrice}, isComplete=${tool.isComplete}');
         break;
       case DrawingToolType.trendAngle:
         final tool = _currentDrawingTool as TrendAngleTool;
-        debugPrint(
+        _logV(
             'TrendAngleTool updateDrawing: 屏幕坐标=$adjustedPoint, 逻辑坐标 logicalIndex=$logicalIndex, logicalPrice=$logicalPrice');
         tool.endIndex = logicalIndex; // 设置逻辑坐标
         tool.endPrice = logicalPrice; // 设置逻辑坐标
@@ -405,43 +414,42 @@ class DrawingToolManager {
         final tool = _currentDrawingTool as ArrowTool;
         tool.endIndex = logicalIndex; // 设置逻辑坐标
         tool.endPrice = logicalPrice; // 设置逻辑坐标
-        debugPrint(
+        _logV(
             'ArrowTool更新后数据: startIndex=${tool.startIndex}, startPrice=${tool.startPrice}, endIndex=${tool.endIndex}, endPrice=${tool.endPrice}, isComplete=${tool.isComplete}');
         break;
       case DrawingToolType.verticalLine:
         final tool = _currentDrawingTool as VerticalLineTool;
-        debugPrint(
+        _logV(
             'VerticalLineTool updateDrawing: 屏幕坐标=$adjustedPoint, 逻辑坐标 logicalIndex=$logicalIndex');
         tool.lineIndex = logicalIndex; // 更新逻辑坐标
         break;
       case DrawingToolType.horizontalLine:
         final tool = _currentDrawingTool as HorizontalLineTool;
-        debugPrint(
+        _logV(
             'HorizontalLineTool updateDrawing: 屏幕坐标=$adjustedPoint, 逻辑坐标 logicalPrice=$logicalPrice');
         tool.priceLevel = logicalPrice; // 更新逻辑坐标
         break;
       case DrawingToolType.horizontalRay:
-        final tool = _currentDrawingTool as HorizontalRayTool;
-        debugPrint(
+        _logV(
             'HorizontalRayTool updateDrawing: 屏幕坐标=$adjustedPoint, 逻辑坐标 logicalIndex=$logicalIndex, logicalPrice=$logicalPrice');
         // 水平射线只需要起点位置，不需要更新终点
         break;
       case DrawingToolType.ray:
         final tool = _currentDrawingTool as RayTool;
-        debugPrint(
+        _logV(
             'RayTool updateDrawing: 屏幕坐标=$adjustedPoint, 逻辑坐标 logicalIndex=$logicalIndex, logicalPrice=$logicalPrice');
         tool.directionIndex = logicalIndex; // 设置方向点逻辑坐标
         tool.directionPrice = logicalPrice; // 设置方向点价格
-        debugPrint(
+        _logV(
             'RayTool更新后数据: startIndex=${tool.startIndex}, startPrice=${tool.startPrice}, directionIndex=${tool.directionIndex}, directionPrice=${tool.directionPrice}, isComplete=${tool.isComplete}');
         break;
       case DrawingToolType.crossLine:
         final tool = _currentDrawingTool as CrossLineTool;
-        debugPrint(
+        _logV(
             'CrossLineTool updateDrawing: 屏幕坐标=$adjustedPoint, 逻辑坐标 logicalIndex=$logicalIndex, logicalPrice=$logicalPrice');
         tool.centerIndex = logicalIndex; // 更新中心点逻辑坐标
         tool.centerPrice = logicalPrice; // 更新中心点价格
-        debugPrint(
+        _logV(
             'CrossLineTool更新后数据: centerIndex=${tool.centerIndex}, centerPrice=${tool.centerPrice}, isComplete=${tool.isComplete}');
         break;
     }
@@ -452,17 +460,17 @@ class DrawingToolManager {
 
   // 完成当前绘制
   void finishDrawing() {
-    debugPrint(
+    _logV(
         'DrawingToolManager.finishDrawing: $_currentDrawingTool, isComplete: ${_currentDrawingTool?.isComplete}');
     if (_currentDrawingTool != null) {
-      debugPrint(
+      _logV(
           '当前工具: ${_currentDrawingTool!.type}, 状态: ${_currentDrawingTool!.state}, 完成: ${_currentDrawingTool!.isComplete}');
       if (_currentDrawingTool!.isComplete) {
         // 将工具状态设置为正常状态（非预览状态）
         _currentDrawingTool!.state = DrawingToolState.none;
         final completedTool = _currentDrawingTool!;
         _tools.add(completedTool);
-        debugPrint('绘图工具已添加，总数: ${_tools.length}');
+        _logV('绘图工具已添加，总数: ${_tools.length}');
 
         // 重要：清除当前绘制工具，这样预览线就会消失
         _currentDrawingTool = null;
@@ -476,10 +484,10 @@ class DrawingToolManager {
         onToolSelected?.call(_selectedTool);
         _handleToolCompletion();
       } else {
-        debugPrint('工具未完成，无法添加到工具列表');
+        _logV('工具未完成，无法添加到工具列表');
       }
     } else {
-      debugPrint('没有当前绘制工具');
+      _logV('没有当前绘制工具');
     }
   }
 
@@ -494,7 +502,6 @@ class DrawingToolManager {
 
   // 取消当前绘制
   void cancelDrawing() {
-    debugPrint('DrawingToolManager.cancelDrawing');
     if (_currentDrawingTool != null) {
       _currentDrawingTool = null;
       _updateDrawingPosition(null);
@@ -504,7 +511,6 @@ class DrawingToolManager {
 
   // 选择工具
   void selectTool(Offset point) {
-    debugPrint('DrawingToolManager.selectTool at $point');
     _clearSelection();
 
     // 从上到下检测点击的工具
@@ -520,7 +526,7 @@ class DrawingToolManager {
         _currentLineStyle = _selectedTool!.lineStyle;
 
         onToolSelected?.call(_selectedTool);
-        debugPrint('选中工具: ${tool.type}, id: ${tool.id}');
+        _logV('选中工具: ${tool.type}, id: ${tool.id}');
         _notifyToolsChanged();
         break;
       }
@@ -564,7 +570,7 @@ class DrawingToolManager {
     required double Function(double) getX,
     required double Function(double) getY,
   }) {
-    debugPrint('DrawingToolManager.selectToolAt at $point');
+    _logV('DrawingToolManager.selectToolAt at $point');
     _clearSelection();
 
     for (int i = _tools.length - 1; i >= 0; i--) {
@@ -730,28 +736,28 @@ class DrawingToolManager {
   // 绘制所有工具
   void drawTools(Canvas canvas, Size size, double scaleX, double scrollX,
       double Function(double) getX, double Function(double) getY) {
-    debugPrint(
+    _logV(
         'DrawingToolManager.drawTools 开始: 工具数量=${_tools.length}, 当前绘制工具=${_currentDrawingTool != null}');
-    debugPrint('绘制参数: size=$size, scaleX=$scaleX, scrollX=$scrollX');
+    _logV('绘制参数: size=$size, scaleX=$scaleX, scrollX=$scrollX');
 
     // 绘制已完成的工具
     for (int i = 0; i < _tools.length; i++) {
       final tool = _tools[i];
-      debugPrint(
+      _logV(
           '检查工具[$i]: type=${tool.type}, id=${tool.id}, isVisible=${tool.isVisible}, state=${tool.state}, isComplete=${tool.isComplete}');
 
       if (tool is TrendLineTool) {
-        debugPrint(
+        _logV(
             'TrendLineTool详情: startIndex=${tool.startIndex}, startPrice=${tool.startPrice}, endIndex=${tool.endIndex}, endPrice=${tool.endPrice}');
       }
 
       if (tool.isVisible) {
-        debugPrint('开始绘制工具[$i]: ${tool.type}, id=${tool.id}');
+        _logV('开始绘制工具[$i]: ${tool.type}, id=${tool.id}');
         try {
           tool.draw(canvas, size, scaleX, scrollX, getX, getY);
-          debugPrint('工具[$i]绘制完成');
-        } catch (e) {
-          debugPrint('工具[$i]绘制异常: $e');
+          _logV('工具[$i]绘制完成');
+        } catch (e, s) {
+          kchartLog('工具[$i]绘制异常: $e', error: e, stackTrace: s);
         }
 
         // 绘制选中状态的视觉反馈
@@ -759,27 +765,27 @@ class DrawingToolManager {
           _drawSelectionIndicator(canvas, tool);
         }
       } else {
-        debugPrint('跳过不可见工具[$i]: ${tool.type}');
+        _logV('跳过不可见工具[$i]: ${tool.type}');
       }
     }
 
     // 绘制正在绘制的工具
     if (_currentDrawingTool != null) {
-      debugPrint(
+      _logV(
           '绘制当前工具: ${_currentDrawingTool!.type}, 完成状态=${_currentDrawingTool!.isComplete}, state=${_currentDrawingTool!.state}');
       if (_currentDrawingTool is TrendLineTool) {
         final tool = _currentDrawingTool as TrendLineTool;
-        debugPrint(
+        _logV(
             '当前TrendLineTool详情: startIndex=${tool.startIndex}, startPrice=${tool.startPrice}, endIndex=${tool.endIndex}, endPrice=${tool.endPrice}');
       }
       try {
         _currentDrawingTool!.draw(canvas, size, scaleX, scrollX, getX, getY);
-        debugPrint('当前工具绘制完成');
-      } catch (e) {
-        debugPrint('当前工具绘制异常: $e');
+        _logV('当前工具绘制完成');
+      } catch (e, s) {
+        kchartLog('当前工具绘制异常: $e', error: e, stackTrace: s);
       }
     }
-    debugPrint('DrawingToolManager.drawTools 结束');
+    _logV('DrawingToolManager.drawTools 结束');
   }
 
   // 绘制选中工具的指示器

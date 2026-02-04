@@ -6,8 +6,10 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // 添加：用于震动反馈
 import 'package:flutter_chen_kchart/k_chart.dart';
-import 'package:flutter_chen_kchart/widget/drawing_tool_quick_panel.dart';
 import 'package:flutter_chen_kchart/widget/drawing_tool_handle_overlay.dart';
+import 'package:flutter_chen_kchart/widget/drawing_tool_quick_panel.dart';
+
+import 'utils/kchart_log.dart';
 
 enum MainState { MA, EMA, BOLL, NONE }
 
@@ -216,8 +218,8 @@ class KChartWidget extends StatefulWidget {
     this.enableDrawingTools = false, // 默认关闭绘图工具
     this.drawingToolManager,
     // 缩放配置参数
-    this.minScale = 0.1,
-    this.maxScale = 5.0,
+    this.minScale = 0.2,
+    this.maxScale = 3.0,
     this.scaleAnimationDuration = 300.0,
     this.scaleAnimationCurve = Curves.easeOutCubic,
     this.enableScaleAnimation = true,
@@ -428,7 +430,7 @@ class _KChartWidgetState extends State<KChartWidget>
     _movementResetTimer = Timer(Duration(milliseconds: 500), () {
       if (mounted) {
         _isDrawingToolMoving = false;
-        debugPrint('自动重置绘图移动状态');
+        kchartLog('自动重置绘图移动状态');
       }
     });
   }
@@ -475,7 +477,7 @@ class _KChartWidgetState extends State<KChartWidget>
         _updateScale(targetScale, center);
       }
     } catch (e) {
-      debugPrint('KChart: Error during scale animation: $e');
+      kchartLog('KChart: Error during scale animation: $e');
       // 发生错误时直接设置目标缩放值
       _updateScale(targetScale, center);
     }
@@ -484,7 +486,7 @@ class _KChartWidgetState extends State<KChartWidget>
   // 放大方法
   Future<void> zoomIn({double factor = 1.2}) async {
     if (factor <= 0 || factor.isNaN || factor.isInfinite) {
-      debugPrint('KChart: Invalid zoom factor: $factor');
+      kchartLog('KChart: Invalid zoom factor: $factor');
       return;
     }
     await scaleTo(_currentScale * factor);
@@ -493,7 +495,7 @@ class _KChartWidgetState extends State<KChartWidget>
   // 缩小方法
   Future<void> zoomOut({double factor = 1.2}) async {
     if (factor <= 0 || factor.isNaN || factor.isInfinite) {
-      debugPrint('KChart: Invalid zoom factor: $factor');
+      kchartLog('KChart: Invalid zoom factor: $factor');
       return;
     }
     await scaleTo(_currentScale / factor);
@@ -510,7 +512,7 @@ class _KChartWidgetState extends State<KChartWidget>
   void _updateScale(double newScale, Offset? center) {
     // 输入验证
     if (newScale.isNaN || newScale.isInfinite) {
-      debugPrint('KChart: Invalid scale value in _updateScale: $newScale');
+      kchartLog('KChart: Invalid scale value in _updateScale: $newScale');
       return;
     }
 
@@ -541,7 +543,7 @@ class _KChartWidgetState extends State<KChartWidget>
     try {
       widget.onScaleChanged?.call(mScaleX);
     } catch (e) {
-      debugPrint('KChart: Error in onScaleChanged callback: $e');
+      kchartLog('KChart: Error in onScaleChanged callback: $e');
     }
 
     // 边界反馈
@@ -672,7 +674,7 @@ class _KChartWidgetState extends State<KChartWidget>
       }
     } catch (e) {
       // 静默处理震动失败的情况
-      debugPrint('Haptic feedback failed: $e');
+      kchartLog('Haptic feedback failed: $e');
     }
   }
 
@@ -721,9 +723,6 @@ class _KChartWidgetState extends State<KChartWidget>
 
   // 新增：绘图工具点击事件处理
   void _handleDrawingToolTap(Offset localPosition) {
-    debugPrint(
-        '_handleDrawingToolTap: position=$localPosition, currentToolType=${_drawingToolManager.currentToolType}, drawingModeEnabled=${_drawingToolManager.modeManager.isDrawingModeEnabled}');
-
     if (_drawingToolManager.currentToolType == null) {
       // 如果没有选择工具，则选择已有的绘图工具
       _drawingToolManager.selectToolAt(
@@ -760,9 +759,6 @@ class _KChartWidgetState extends State<KChartWidget>
       return;
     }
 
-    // 修复：强制设置十字线位置为点击位置，覆盖可能的错误跟踪
-    debugPrint('强制设置十字线位置为点击位置: $localPosition');
-
     // 使用统一的位置更新方法，会自动处理边界限制
     _updateDrawingCrosshairPosition(localPosition, '_handleDrawingToolTap');
 
@@ -771,28 +767,22 @@ class _KChartWidgetState extends State<KChartWidget>
 
   // 开始绘图工具选择流程
   void _startDrawingToolSelection(DrawingToolType toolType) {
-    debugPrint('开始绘图工具选择流程: $toolType');
-
     _isDrawingCrosshairMode = true;
 
     // 修复：确保十字线位置已正确设置
     if (_drawingCrosshairPosition == null) {
-      debugPrint('警告：十字线位置为null，使用屏幕中心作为后备');
+      kchartLog('警告：十字线位置为null，使用屏幕中心作为后备');
       _drawingCrosshairPosition = Offset(mWidth / 2, mHeight / 2);
-    } else {
-      debugPrint('十字线初始位置: $_drawingCrosshairPosition');
     }
 
     if (_isSinglePointTool(toolType)) {
       // 单点工具：直接进入位置选择
       _isSelectingStartPoint = false;
       _isSelectingEndPoint = false;
-      debugPrint('单点工具：进入位置选择模式');
     } else {
       // 双点工具：先选择起点
       _isSelectingStartPoint = true;
       _isSelectingEndPoint = false;
-      debugPrint('双点工具：进入起点选择模式');
     }
 
     _triggerDrawingToolHaptic();
@@ -803,7 +793,6 @@ class _KChartWidgetState extends State<KChartWidget>
   void _confirmStartPoint(Offset localPosition, DrawingToolType toolType) {
     // 修复：使用十字线位置而不是点击位置
     final confirmPosition = _drawingCrosshairPosition ?? localPosition;
-    debugPrint('确认起点位置: $confirmPosition (点击位置: $localPosition)');
 
     // 记录绘图开始位置
     _drawingStartPosition = confirmPosition;
@@ -827,7 +816,6 @@ class _KChartWidgetState extends State<KChartWidget>
     // 进入终点选择模式
     _isSelectingStartPoint = false;
     _isSelectingEndPoint = true;
-    debugPrint('进入终点选择模式');
 
     _triggerDrawingToolHaptic();
     notifyChanged();
@@ -837,7 +825,6 @@ class _KChartWidgetState extends State<KChartWidget>
   void _confirmEndPoint(Offset localPosition, DrawingToolType toolType) {
     // 修复：使用十字线位置而不是点击位置
     final confirmPosition = _drawingCrosshairPosition ?? localPosition;
-    debugPrint('确认终点位置: $confirmPosition (点击位置: $localPosition)');
 
     // 更新终点并完成绘图
     _drawingToolManager.updateDrawing(
@@ -863,7 +850,6 @@ class _KChartWidgetState extends State<KChartWidget>
     _selectedDrawingTool = _drawingToolManager.selectedTool;
     _drawingToolPanelPosition = confirmPosition;
 
-    debugPrint('双点工具绘制完成');
     _triggerDrawingToolHaptic();
     notifyChanged();
   }
@@ -872,7 +858,6 @@ class _KChartWidgetState extends State<KChartWidget>
   void _confirmSinglePoint(Offset localPosition, DrawingToolType toolType) {
     // 修复：使用十字线位置而不是点击位置
     final confirmPosition = _drawingCrosshairPosition ?? localPosition;
-    debugPrint('确认单点位置: $confirmPosition (点击位置: $localPosition)');
 
     // 记录绘图开始位置
     _drawingStartPosition = confirmPosition;
@@ -902,7 +887,6 @@ class _KChartWidgetState extends State<KChartWidget>
     _selectedDrawingTool = _drawingToolManager.selectedTool;
     _drawingToolPanelPosition = confirmPosition;
 
-    debugPrint('单点工具绘制完成');
     _triggerDrawingToolHaptic();
     notifyChanged();
   }
@@ -915,7 +899,6 @@ class _KChartWidgetState extends State<KChartWidget>
     _drawingCrosshairPosition = null;
     _drawingStartPosition = null;
     _isDrawingToolMoving = false;
-    debugPrint('退出绘图十字线选择模式');
   }
 
   double _indexToScreenX(double index) {
@@ -1443,21 +1426,12 @@ class _KChartWidgetState extends State<KChartWidget>
         toolType == DrawingToolType.horizontalRay; // 水平射线也是单点工具
   }
 
-  // 新增：判断是否为需要确定方向的工具（射线类工具）
-  bool _isDirectionTool(DrawingToolType toolType) {
-    return toolType == DrawingToolType.horizontalRay ||
-        toolType == DrawingToolType.ray;
-  }
-
   // 新增：绘图工具开始拖拽事件
   void _handleDrawingPanStart(Offset localPosition) {
-    debugPrint(
-        '_handleDrawingPanStart: position=$localPosition, currentToolType=${_drawingToolManager.currentToolType}');
     if (_drawingToolManager.currentToolType == null) return;
 
     // 修复：只有在十字线选择模式下才允许拖拽操作
     if (!_isDrawingCrosshairMode) {
-      debugPrint('不在十字线选择模式，忽略拖拽开始');
       return;
     }
 
@@ -1470,12 +1444,8 @@ class _KChartWidgetState extends State<KChartWidget>
 
   // 新增：绘图工具移动事件
   void _handleDrawingPanUpdate(Offset localPosition) {
-    debugPrint(
-        '_handleDrawingPanUpdate: position=$localPosition, isDrawingCrosshairMode=$_isDrawingCrosshairMode');
-
     // 修复：只有在十字线选择模式下才处理拖拽更新
     if (!_isDrawingCrosshairMode) {
-      debugPrint('不在十字线选择模式，忽略拖拽更新');
       return;
     }
 
@@ -1500,7 +1470,6 @@ class _KChartWidgetState extends State<KChartWidget>
             _painter?.calculateSelectedXExtended(screenX) ?? 0,
         chartRect: _getMainRectSafe() ?? Rect.zero,
       );
-      debugPrint('实时更新终点位置到: $actualPosition');
     }
 
     notifyChanged(); // 触发重绘以显示十字线移动和实时预览
@@ -1508,13 +1477,9 @@ class _KChartWidgetState extends State<KChartWidget>
 
   // 新增：绘图工具结束拖拽事件
   void _handleDrawingPanEnd() {
-    debugPrint(
-        '_handleDrawingPanEnd: isDrawingCrosshairMode=$_isDrawingCrosshairMode');
-
     // 修复：拖拽结束不应该直接完成绘图，应该等待点击确认
     // 这里只需要更新十字线位置，实际的确认需要点击操作
     if (_isDrawingCrosshairMode) {
-      debugPrint('拖拽结束，等待点击确认位置');
       // 不做任何操作，等待用户点击确认
     }
   }
@@ -1528,7 +1493,7 @@ class _KChartWidgetState extends State<KChartWidget>
         newPosition.dy.isNaN ||
         newPosition.dx.isInfinite ||
         newPosition.dy.isInfinite) {
-      debugPrint('警告：无效的十字线位置 $newPosition，来源: $source');
+      kchartLog('警告：无效的十字线位置 $newPosition，来源: $source');
       return;
     }
 
@@ -1538,11 +1503,9 @@ class _KChartWidgetState extends State<KChartWidget>
     if (mainRect != null) {
       // 使用K线图主区域作为边界
       boundary = mainRect;
-      debugPrint('使用K线图主区域边界: $boundary');
     } else {
       // 后备方案：使用整个组件区域
       boundary = Rect.fromLTWH(0, 0, mWidth, mHeight);
-      debugPrint('使用组件边界: $boundary');
     }
 
     // 应用边界限制，确保十字线在有效区域内
@@ -1557,18 +1520,9 @@ class _KChartWidgetState extends State<KChartWidget>
       distance = (clampedPosition - oldPosition).distance;
     }
 
-    // 调试信息
-    if (newPosition != clampedPosition) {
-      debugPrint(
-          '十字线位置已限制在边界内 [来源: $source]: $newPosition -> $clampedPosition');
-    } else {
-      debugPrint(
-          '十字线位置更新 [来源: $source]: $oldPosition -> $clampedPosition (距离: ${distance.toStringAsFixed(2)})');
-    }
-
     // 如果位置变化过大，可能是坐标系统问题
     if (oldPosition != null && distance > 100) {
-      debugPrint('警告：十字线位置变化过大 (${distance.toStringAsFixed(2)}px)，可能存在坐标系统问题');
+      kchartLog('警告：十字线位置变化过大 (${distance.toStringAsFixed(2)}px)，可能存在坐标系统问题');
     }
 
     _drawingCrosshairPosition = clampedPosition;
@@ -1662,7 +1616,6 @@ class _KChartWidgetState extends State<KChartWidget>
                 );
               }
 
-              debugPrint('绘图十字线移动: ${_drawingCrosshairPosition}');
               notifyChanged();
               return;
             }
@@ -1674,8 +1627,6 @@ class _KChartWidgetState extends State<KChartWidget>
                 _drawingToolManager.currentToolType != null) {
               // 轻量级跟踪鼠标位置，为后续十字线显示做准备
               // 注意：这里不触发重绘，避免干扰
-              debugPrint('预跟踪十字线位置: ${details.localPosition}');
-
               // 获取边界
               Rect boundary;
               boundary =
@@ -1702,12 +1653,10 @@ class _KChartWidgetState extends State<KChartWidget>
                     (details.localPosition - _drawingStartPosition!).distance;
                 if (distance > _movementThreshold) {
                   _isDrawingToolMoving = true;
-                  debugPrint('绘图工具开始移动，距离: $distance');
                   _resetDrawingMovementState(); // 启动重置定时器
                 }
               }
 
-              debugPrint('指针移动更新绘图工具位置: ${details.localPosition}');
               _drawingToolManager.updateDrawing(
                 details.localPosition,
                 kLineData: widget.datas,
@@ -1756,7 +1705,6 @@ class _KChartWidgetState extends State<KChartWidget>
                   );
                 }
 
-                debugPrint('绘图十字线鼠标悬停: ${_drawingCrosshairPosition}');
                 notifyChanged();
                 return;
               }
@@ -1767,8 +1715,6 @@ class _KChartWidgetState extends State<KChartWidget>
                   !_isDrawingCrosshairMode &&
                   _drawingToolManager.currentToolType != null) {
                 // 轻量级跟踪鼠标位置，为后续十字线显示做准备
-                debugPrint('预跟踪十字线位置(hover): ${event.localPosition}');
-
                 // 获取边界
                 Rect boundary;
                 boundary =
@@ -1794,11 +1740,9 @@ class _KChartWidgetState extends State<KChartWidget>
                       (event.localPosition - _drawingStartPosition!).distance;
                   if (distance > _movementThreshold) {
                     _isDrawingToolMoving = true;
-                    debugPrint('绘图工具开始鼠标移动，距离: $distance');
                   }
                 }
 
-                debugPrint('鼠标悬停更新绘图工具位置: ${event.localPosition}');
                 _drawingToolManager.updateDrawing(
                   event.localPosition,
                   kLineData: widget.datas,
@@ -1865,7 +1809,6 @@ class _KChartWidgetState extends State<KChartWidget>
                 // 如果点击了其他区域且处于绘图十字线选择模式，则退出该模式
                 if (widget.enableDrawingTools && _isDrawingCrosshairMode) {
                   _exitDrawingCrosshairMode();
-                  debugPrint('点击其他区域，退出绘图十字线选择模式');
                   notifyChanged();
                   return;
                 }
@@ -2378,9 +2321,7 @@ class _KChartWidgetState extends State<KChartWidget>
                   ),
                 ),
                 ...rows.asMap().entries.map((entry) {
-                  final index = entry.key;
                   final item = entry.value;
-                  final isLast = index == rows.length - 1;
                   return Container(
                     padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     // decoration: BoxDecoration(

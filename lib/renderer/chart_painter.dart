@@ -219,7 +219,6 @@ class ChartPainter extends BaseChartPainter {
 
     // 在恢复canvas状态后绘制绘图工具，现在传递正确的坐标转换函数和主图边界
     if (drawingToolManager != null) {
-      debugPrint('ChartPainter.drawChart: 开始绘制绘图工具');
       drawingToolManager!.drawTools(
         canvas,
         size,
@@ -230,8 +229,6 @@ class ChartPainter extends BaseChartPainter {
           // 使用与getX相同的计算逻辑，但不限制索引范围
           final absoluteX = index * mPointWidth + mPointWidth / 2;
           final screenX = translateXtoX(absoluteX);
-          debugPrint(
-              '扩展坐标转换: index=$index -> absoluteX=$absoluteX -> screenX=$screenX (支持空白区域)');
           return screenX;
         },
         getMainY, // 传递正确的Y坐标转换函数（价格转屏幕坐标）

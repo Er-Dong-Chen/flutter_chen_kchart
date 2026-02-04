@@ -1,5 +1,14 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../utils/kchart_log.dart';
+
+const bool _kChartVerboseLogEnabled = false;
+
+void _logV(Object? message) {
+  if (_kChartVerboseLogEnabled) {
+    kchartLog(message);
+  }
+}
 
 // 绘图工具类型枚举
 enum DrawingToolType {
@@ -281,7 +290,7 @@ class TrendLineTool extends DrawingTool {
   @override
   void draw(Canvas canvas, Size size, double scaleX, double scrollX,
       double Function(double) getX, double Function(double) getY) {
-    debugPrint(
+    _logV(
         'TrendLineTool.draw 开始: id=$id, state=$state, 逻辑坐标 startIndex=$startIndex, startPrice=$startPrice, endIndex=$endIndex, endPrice=$endPrice');
 
     final paint = Paint()
@@ -297,7 +306,7 @@ class TrendLineTool extends DrawingTool {
         final startScreenX = getX(startIndex!);
         final startScreenY = getY(startPrice!);
         final startPoint = Offset(startScreenX, startScreenY);
-        debugPrint(
+        _logV(
             'TrendLineTool.draw: 起点 逻辑($startIndex, $startPrice) -> 屏幕($startScreenX, $startScreenY)');
 
         if (endIndex != null && endPrice != null) {
@@ -305,9 +314,9 @@ class TrendLineTool extends DrawingTool {
           final endScreenX = getX(endIndex!);
           final endScreenY = getY(endPrice!);
           final endPoint = Offset(endScreenX, endScreenY);
-          debugPrint(
+          _logV(
               'TrendLineTool.draw: 终点 逻辑($endIndex, $endPrice) -> 屏幕($endScreenX, $endScreenY)');
-          debugPrint('绘制完整趋势线: 从 $startPoint 到 $endPoint, state=$state');
+          _logV('绘制完整趋势线: 从 $startPoint 到 $endPoint, state=$state');
 
           // 检查点是否有效
           if (startPoint.dx.isFinite &&
@@ -334,27 +343,27 @@ class TrendLineTool extends DrawingTool {
               }
             }
           } else {
-            debugPrint('警告：无效的绘制点 startPoint=$startPoint, endPoint=$endPoint');
+            _logV('警告：无效的绘制点 startPoint=$startPoint, endPoint=$endPoint');
           }
         } else {
           // 只有起点数据，绘制起点标记
-          debugPrint('绘制趋势线起点: $startPoint (只有起点数据)');
+          _logV('绘制趋势线起点: $startPoint (只有起点数据)');
           if (startPoint.dx.isFinite && startPoint.dy.isFinite) {
             canvas.drawCircle(
                 startPoint, 4.0, paint..style = PaintingStyle.fill);
             // 绘制起点周围的小圆圈指示器
             canvas.drawCircle(
                 startPoint, 6.0, paint..style = PaintingStyle.stroke);
-            debugPrint('绘制起点标记完成');
+            _logV('绘制起点标记完成');
           } else {
-            debugPrint('警告：无效的起点 $startPoint');
+            _logV('警告：无效的起点 $startPoint');
           }
         }
-      } catch (e) {
-        debugPrint('TrendLineTool.draw 绘制异常: $e');
+      } catch (e, s) {
+        kchartLog('TrendLineTool.draw 绘制异常: $e', error: e, stackTrace: s);
       }
     } else {
-      debugPrint(
+      _logV(
           'TrendLineTool.draw: 没有起点逻辑坐标数据 startIndex=$startIndex, startPrice=$startPrice');
     }
   }
@@ -475,11 +484,11 @@ class TrendAngleTool extends DrawingTool {
   @override
   void draw(Canvas canvas, Size size, double scaleX, double scrollX,
       double Function(double) getX, double Function(double) getY) {
-    debugPrint(
+    _logV(
         'TrendAngleTool.draw 开始: id=$id, state=$state, 逻辑坐标 startIndex=$startIndex, startPrice=$startPrice, endIndex=$endIndex, endPrice=$endPrice');
 
     if (startIndex == null || startPrice == null) {
-      debugPrint('TrendAngleTool.draw: 没有起点逻辑坐标数据');
+      _logV('TrendAngleTool.draw: 没有起点逻辑坐标数据');
       return;
     }
 
@@ -495,11 +504,11 @@ class TrendAngleTool extends DrawingTool {
       final startScreenY = getY(startPrice!);
       final startPoint = Offset(startScreenX, startScreenY);
 
-      debugPrint(
+      _logV(
           'TrendAngleTool.draw: 起点 逻辑($startIndex, $startPrice) -> 屏幕($startScreenX, $startScreenY)');
 
       if (!startScreenX.isFinite || !startScreenY.isFinite) {
-        debugPrint('警告：无效的起点屏幕坐标');
+        _logV('警告：无效的起点屏幕坐标');
         return;
       }
 
@@ -509,11 +518,11 @@ class TrendAngleTool extends DrawingTool {
         final endScreenY = getY(endPrice!);
         final endPoint = Offset(endScreenX, endScreenY);
 
-        debugPrint(
+        _logV(
             'TrendAngleTool.draw: 终点 逻辑($endIndex, $endPrice) -> 屏幕($endScreenX, $endScreenY)');
 
         if (endScreenX.isFinite && endScreenY.isFinite) {
-          debugPrint('绘制完整趋势角度线: 从 $startPoint 到 $endPoint');
+          _logV('绘制完整趋势角度线: 从 $startPoint 到 $endPoint');
 
           // 1. 绘制主趋势线
           drawStyledLine(canvas, startPoint, endPoint, paint);
@@ -526,7 +535,7 @@ class TrendAngleTool extends DrawingTool {
           // 3. 绘制角度弧线（始终虚线）
           _drawAngleArc(canvas, startPoint, endPoint, paint, true);
 
-          debugPrint('绘制趋势角度：实线主线 + 虚线参考线和角度弧');
+          _logV('绘制趋势角度：实线主线 + 虚线参考线和角度弧');
 
           // 计算并显示角度文本
           if (state != DrawingToolState.drawing) {
@@ -536,10 +545,10 @@ class TrendAngleTool extends DrawingTool {
       } else {
         // 只有起点，绘制起点标记
         _drawPointMarker(canvas, startPoint, paint);
-        debugPrint('绘制趋势角度线起点: $startPoint （只有起点数据）');
+        _logV('绘制趋势角度线起点: $startPoint （只有起点数据）');
       }
-    } catch (e) {
-      debugPrint('TrendAngleTool.draw 绘制异常: $e');
+    } catch (e, s) {
+      kchartLog('TrendAngleTool.draw 绘制异常: $e', error: e, stackTrace: s);
     }
   }
 
@@ -765,7 +774,7 @@ class ArrowTool extends DrawingTool {
   @override
   void draw(Canvas canvas, Size size, double scaleX, double scrollX,
       double Function(double) getX, double Function(double) getY) {
-    debugPrint(
+    _logV(
         'ArrowTool.draw 开始: id=$id, state=$state, 逻辑坐标 startIndex=$startIndex, startPrice=$startPrice, endIndex=$endIndex, endPrice=$endPrice');
 
     final paint = Paint()
@@ -781,7 +790,7 @@ class ArrowTool extends DrawingTool {
         final startScreenX = getX(startIndex!);
         final startScreenY = getY(startPrice!);
         final startPoint = Offset(startScreenX, startScreenY);
-        debugPrint(
+        _logV(
             'ArrowTool.draw: 起点 逻辑($startIndex, $startPrice) -> 屏幕($startScreenX, $startScreenY)');
 
         if (endIndex != null && endPrice != null) {
@@ -789,9 +798,9 @@ class ArrowTool extends DrawingTool {
           final endScreenX = getX(endIndex!);
           final endScreenY = getY(endPrice!);
           final endPoint = Offset(endScreenX, endScreenY);
-          debugPrint(
+          _logV(
               'ArrowTool.draw: 终点 逻辑($endIndex, $endPrice) -> 屏幕($endScreenX, $endScreenY)');
-          debugPrint('绘制完整箭头: 从 $startPoint 到 $endPoint, state=$state');
+          _logV('绘制完整箭头: 从 $startPoint 到 $endPoint, state=$state');
 
           // 检查点是否有效
           if (startPoint.dx.isFinite &&
@@ -811,27 +820,27 @@ class ArrowTool extends DrawingTool {
             drawStyledLine(canvas, endPoint, arrowHead1, paint);
             drawStyledLine(canvas, endPoint, arrowHead2, paint);
           } else {
-            debugPrint('警告：无效的绘制点 startPoint=$startPoint, endPoint=$endPoint');
+            _logV('警告：无效的绘制点 startPoint=$startPoint, endPoint=$endPoint');
           }
         } else {
           // 只有起点数据，绘制起点标记
-          debugPrint('绘制箭头起点: $startPoint (只有起点数据)');
+          _logV('绘制箭头起点: $startPoint (只有起点数据)');
           if (startPoint.dx.isFinite && startPoint.dy.isFinite) {
             canvas.drawCircle(
                 startPoint, 4.0, paint..style = PaintingStyle.fill);
             // 绘制起点周围的小圆圈指示器
             canvas.drawCircle(
                 startPoint, 6.0, paint..style = PaintingStyle.stroke);
-            debugPrint('绘制起点标记完成');
+            _logV('绘制起点标记完成');
           } else {
-            debugPrint('警告：无效的起点 $startPoint');
+            _logV('警告：无效的起点 $startPoint');
           }
         }
-      } catch (e) {
-        debugPrint('ArrowTool.draw 绘制异常: $e');
+      } catch (e, s) {
+        kchartLog('ArrowTool.draw 绘制异常: $e', error: e, stackTrace: s);
       }
     } else {
-      debugPrint(
+      _logV(
           'ArrowTool.draw: 没有起点逻辑坐标数据 startIndex=$startIndex, startPrice=$startPrice');
     }
   }
@@ -944,11 +953,11 @@ class VerticalLineTool extends DrawingTool {
   @override
   void draw(Canvas canvas, Size size, double scaleX, double scrollX,
       double Function(double) getX, double Function(double) getY) {
-    debugPrint(
+    _logV(
         'VerticalLineTool.draw 开始: id=$id, state=$state, 逻辑坐标 lineIndex=$lineIndex');
 
     if (lineIndex == null) {
-      debugPrint('VerticalLineTool.draw: 没有逻辑坐标数据 lineIndex=$lineIndex');
+      _logV('VerticalLineTool.draw: 没有逻辑坐标数据 lineIndex=$lineIndex');
       return;
     }
 
@@ -961,7 +970,7 @@ class VerticalLineTool extends DrawingTool {
     try {
       // 使用逻辑坐标系统，转换为屏幕坐标
       final screenX = getX(lineIndex!);
-      debugPrint('VerticalLineTool.draw: 逻辑($lineIndex) -> 屏幕($screenX)');
+      _logV('VerticalLineTool.draw: 逻辑($lineIndex) -> 屏幕($screenX)');
 
       if (screenX.isFinite) {
         // 更精确的主图区域计算，使用标准的图表布局参数
@@ -975,16 +984,16 @@ class VerticalLineTool extends DrawingTool {
 
         final mainChartBottom = mainChartTop + mainHeight;
 
-        debugPrint(
+        _logV(
             '垂直线主图区域计算: top=$mainChartTop, bottom=$mainChartBottom, height=$mainHeight');
 
         drawStyledLine(canvas, Offset(screenX, mainChartTop),
             Offset(screenX, mainChartBottom), paint);
       } else {
-        debugPrint('警告：无效的屏幕坐标 screenX=$screenX');
+        _logV('警告：无效的屏幕坐标 screenX=$screenX');
       }
-    } catch (e) {
-      debugPrint('VerticalLineTool.draw 绘制异常: $e');
+    } catch (e, s) {
+      kchartLog('VerticalLineTool.draw 绘制异常: $e', error: e, stackTrace: s);
     }
   }
 
@@ -1086,11 +1095,11 @@ class HorizontalLineTool extends DrawingTool {
   @override
   void draw(Canvas canvas, Size size, double scaleX, double scrollX,
       double Function(double) getX, double Function(double) getY) {
-    debugPrint(
+    _logV(
         'HorizontalLineTool.draw 开始: id=$id, state=$state, 逻辑坐标 priceLevel=$priceLevel');
 
     if (priceLevel == null) {
-      debugPrint('HorizontalLineTool.draw: 没有逻辑坐标数据 priceLevel=$priceLevel');
+      _logV('HorizontalLineTool.draw: 没有逻辑坐标数据 priceLevel=$priceLevel');
       return;
     }
 
@@ -1103,7 +1112,7 @@ class HorizontalLineTool extends DrawingTool {
     try {
       // 使用逻辑坐标系统，转换价格为屏幕坐标
       final screenY = getY(priceLevel!);
-      debugPrint('HorizontalLineTool.draw: 逻辑($priceLevel) -> 屏幕($screenY)');
+      _logV('HorizontalLineTool.draw: 逻辑($priceLevel) -> 屏幕($screenY)');
 
       if (screenY.isFinite) {
         // 计算主图区域边界，确保水平线仅在K线区域内显示
@@ -1116,7 +1125,7 @@ class HorizontalLineTool extends DrawingTool {
 
         // 检查是否在主图区域内，如果超出边界则不绘制
         if (screenY < mainChartTop || screenY > mainChartBottom) {
-          debugPrint(
+          _logV(
               '水平线超出K线区域边界，不绘制: screenY=$screenY, 边界范围[$mainChartTop, $mainChartBottom]');
           return; // 超出边界时完全不绘制
         }
@@ -1124,10 +1133,10 @@ class HorizontalLineTool extends DrawingTool {
         drawStyledLine(
             canvas, Offset(0, screenY), Offset(size.width, screenY), paint);
       } else {
-        debugPrint('警告：无效的屏幕坐标 screenY=$screenY');
+        _logV('警告：无效的屏幕坐标 screenY=$screenY');
       }
-    } catch (e) {
-      debugPrint('HorizontalLineTool.draw 绘制异常: $e');
+    } catch (e, s) {
+      kchartLog('HorizontalLineTool.draw 绘制异常: $e', error: e, stackTrace: s);
     }
 
     // 水平线不绘制价格标签
@@ -1256,11 +1265,11 @@ class HorizontalRayTool extends DrawingTool {
   @override
   void draw(Canvas canvas, Size size, double scaleX, double scrollX,
       double Function(double) getX, double Function(double) getY) {
-    debugPrint(
+    _logV(
         'HorizontalRayTool.draw 开始: id=$id, state=$state, 逻辑坐标 startIndex=$startIndex, startPrice=$startPrice, endIndex=$endIndex, endPrice=$endPrice');
 
     if (startIndex == null || startPrice == null) {
-      debugPrint('HorizontalRayTool.draw: 没有起点逻辑坐标数据');
+      _logV('HorizontalRayTool.draw: 没有起点逻辑坐标数据');
       return;
     }
 
@@ -1284,7 +1293,7 @@ class HorizontalRayTool extends DrawingTool {
       final constrainedStartY =
           startScreenY.clamp(mainChartTop, mainChartBottom);
 
-      debugPrint(
+      _logV(
           'HorizontalRayTool.draw: 起点 逻辑($startIndex, $startPrice) -> 屏幕($startScreenX, $startScreenY) -> 约束($startScreenX, $constrainedStartY)');
 
       if (startScreenX.isFinite && startScreenY.isFinite) {
@@ -1298,7 +1307,7 @@ class HorizontalRayTool extends DrawingTool {
 
         // 检查是否在主图区域内，如果超出边界则不绘制
         if (startScreenY < mainChartTop || startScreenY > mainChartBottom) {
-          debugPrint(
+          _logV(
               '水平射线超出K线区域边界，不绘制: startScreenY=$startScreenY, 边界范围[$mainChartTop, $mainChartBottom]');
           return; // 超出边界时完全不绘制
         }
@@ -1308,7 +1317,7 @@ class HorizontalRayTool extends DrawingTool {
         final startPoint = Offset(startScreenX, startScreenY);
         final endPoint = Offset(size.width, startScreenY); // 水平线延伸到右边界
 
-        debugPrint('绘制水平射线: 从起点 $startPoint 到右边界 $endPoint（约束在K线区域）');
+        _logV('绘制水平射线: 从起点 $startPoint 到右边界 $endPoint（约束在K线区域）');
 
         drawStyledLine(canvas, startPoint, endPoint, paint);
 
@@ -1319,11 +1328,11 @@ class HorizontalRayTool extends DrawingTool {
               canvas, size, startScreenX, startPrice!, startScreenY);
         }
       } else {
-        debugPrint(
+        _logV(
             '警告：无效的屏幕坐标 startScreenX=$startScreenX, startScreenY=$startScreenY');
       }
-    } catch (e) {
-      debugPrint('HorizontalRayTool.draw 绘制异常: $e');
+    } catch (e, s) {
+      kchartLog('HorizontalRayTool.draw 绘制异常: $e', error: e, stackTrace: s);
     }
   }
 
@@ -1531,112 +1540,16 @@ class RayTool extends DrawingTool {
           strokeWidth: strokeWidth,
         );
 
-  /// 计算射线终点（支持360度方向，延伸到整个屏幕区域）
-  Offset? _calculateRayEndPointFullScreen(Offset startPoint, double dx,
-      double dy, double canvasWidth, double canvasHeight) {
-    debugPrint(
-        '射线计算开始: 起点=$startPoint, dx=$dx, dy=$dy, 屏幕大小=${canvasWidth}x$canvasHeight');
-
-    // 处理各种特殊情况
-    if (dx.abs() < 0.001 && dy.abs() < 0.001) {
-      debugPrint('方向向量太小，无法计算射线');
-      return null;
-    }
-
-    List<Offset> intersections = [];
-
-    // 计算与屏幕四个边界的交点
-
-    // 1. 与左边界的交点 (x = 0)
-    if (dx.abs() > 0.001) {
-      double t = (0 - startPoint.dx) / dx;
-      if (t > 0.001) {
-        // 射线向前方向
-        double intersectionY = startPoint.dy + t * dy;
-        if (intersectionY >= 0 && intersectionY <= canvasHeight) {
-          intersections.add(Offset(0, intersectionY));
-          debugPrint('与左边界交点: (0, $intersectionY)');
-        }
-      }
-    }
-
-    // 2. 与右边界的交点 (x = canvasWidth)
-    if (dx.abs() > 0.001) {
-      double t = (canvasWidth - startPoint.dx) / dx;
-      if (t > 0.001) {
-        double intersectionY = startPoint.dy + t * dy;
-        if (intersectionY >= 0 && intersectionY <= canvasHeight) {
-          intersections.add(Offset(canvasWidth, intersectionY));
-          debugPrint('与右边界交点: ($canvasWidth, $intersectionY)');
-        }
-      }
-    }
-
-    // 3. 与上边界的交点 (y = 0) - 关键修复！
-    if (dy.abs() > 0.001) {
-      double t = (0 - startPoint.dy) / dy;
-      if (t > 0.001) {
-        double intersectionX = startPoint.dx + t * dx;
-        if (intersectionX >= 0 && intersectionX <= canvasWidth) {
-          intersections.add(Offset(intersectionX, 0));
-          debugPrint('与上边界交点: ($intersectionX, 0) - 支持向上的射线');
-        }
-      }
-    }
-
-    // 4. 与下边界的交点 (y = canvasHeight) - 关键修复！
-    if (dy.abs() > 0.001) {
-      double t = (canvasHeight - startPoint.dy) / dy;
-      if (t > 0.001) {
-        double intersectionX = startPoint.dx + t * dx;
-        if (intersectionX >= 0 && intersectionX <= canvasWidth) {
-          intersections.add(Offset(intersectionX, canvasHeight));
-          debugPrint('与下边界交点: ($intersectionX, $canvasHeight) - 支持向下的射线');
-        }
-      }
-    }
-
-    debugPrint('找到 ${intersections.length} 个交点');
-
-    // 选择最近的交点作为终点
-    if (intersections.isNotEmpty) {
-      // 按距离排序，选择最近的交点
-      intersections.sort((a, b) {
-        double distA = (a - startPoint).distance;
-        double distB = (b - startPoint).distance;
-        return distA.compareTo(distB);
-      });
-
-      final closestPoint = intersections.first;
-      final distance = (closestPoint - startPoint).distance;
-
-      debugPrint('选择最近的交点: $closestPoint，距离: $distance');
-      return closestPoint;
-    }
-
-    debugPrint('未找到任何交点，返回默认终点');
-
-    // 如果没有找到交点，使用简单的线性延伸
-    const double extension = 1000;
-    return Offset((startPoint.dx + dx * extension).clamp(0, canvasWidth),
-        (startPoint.dy + dy * extension).clamp(0, canvasHeight));
-  }
-
   @override
   void draw(Canvas canvas, Size size, double scaleX, double scrollX,
       double Function(double) getX, double Function(double) getY) {
-    debugPrint(
+    _logV(
         'RayTool.draw 开始: id=$id, state=$state, 逻辑坐标 startIndex=$startIndex, startPrice=$startPrice, directionIndex=$directionIndex, directionPrice=$directionPrice');
 
     if (startIndex == null || startPrice == null) {
-      debugPrint('RayTool.draw: 没有起点逻辑坐标数据');
+      _logV('RayTool.draw: 没有起点逻辑坐标数据');
       return;
     }
-
-    // 计算主图区域边界（约占总高度的60%，从顶部30开始）
-    final mainChartTop = 30.0;
-    final mainChartHeight = size.height * 0.6;
-    final mainChartBottom = mainChartTop + mainChartHeight;
 
     final paint = Paint()
       ..color =
@@ -1652,11 +1565,11 @@ class RayTool extends DrawingTool {
       // 射线起点不约束到主图区域，保持原始坐标用于计算方向
       final startPoint = Offset(startScreenX, startScreenY);
 
-      debugPrint(
+      _logV(
           'RayTool.draw: 起点 逻辑($startIndex, $startPrice) -> 屏幕($startScreenX, $startScreenY)');
 
       if (!startScreenX.isFinite || !startScreenY.isFinite) {
-        debugPrint('警告：无效的起点屏幕坐标');
+        _logV('警告：无效的起点屏幕坐标');
         return;
       }
 
@@ -1668,11 +1581,11 @@ class RayTool extends DrawingTool {
         // 不约束方向点坐标，保持原始坐标用于方向计算
         final directionPoint = Offset(directionScreenX, directionScreenY);
 
-        debugPrint(
+        _logV(
             'RayTool.draw: 方向点 逻辑($directionIndex, $directionPrice) -> 屏幕($directionScreenX, $directionScreenY)');
 
         if (directionScreenX.isFinite && directionScreenY.isFinite) {
-          debugPrint('绘制射线: 从 $startPoint 到方向 $directionPoint');
+          _logV('绘制射线: 从 $startPoint 到方向 $directionPoint');
 
           // 计算射线方向向量（使用原始坐标）
           final dx = directionScreenX - startScreenX;
@@ -1691,20 +1604,20 @@ class RayTool extends DrawingTool {
               startPoint, dx, dy, size.width, mainChartTop, mainChartBottom);
 
           if (endPoint != null) {
-            debugPrint('计算得到射线终点: $endPoint');
+            _logV('计算得到射线终点: $endPoint');
 
             drawStyledLine(canvas, startPoint, endPoint, paint);
           } else {
-            debugPrint('无法计算射线终点，跳过绘制');
+            _logV('无法计算射线终点，跳过绘制');
           }
         }
       } else {
         // 只有起点，绘制起点标记
         _drawPointMarker(canvas, startPoint, paint);
-        debugPrint('绘制射线起点: $startPoint （只有起点数据）');
+        _logV('绘制射线起点: $startPoint （只有起点数据）');
       }
-    } catch (e) {
-      debugPrint('RayTool.draw 绘制异常: $e');
+    } catch (e, s) {
+      kchartLog('RayTool.draw 绘制异常: $e', error: e, stackTrace: s);
     }
   }
 
@@ -1718,12 +1631,12 @@ class RayTool extends DrawingTool {
   /// 计算射线终点（仅在K线主图区域内，与垂直线保持一致）
   Offset? _calculateRayEndPointMainChart(Offset startPoint, double dx,
       double dy, double canvasWidth, double chartTop, double chartBottom) {
-    debugPrint(
+    _logV(
         '射线主图区域计算: 起点=$startPoint, dx=$dx, dy=$dy, 主图边界=($chartTop, $chartBottom)');
 
     // 处理各种特殊情况
     if (dx.abs() < 0.001 && dy.abs() < 0.001) {
-      debugPrint('方向向量太小，无法计算射线');
+      _logV('方向向量太小，无法计算射线');
       return null;
     }
 
@@ -1739,7 +1652,7 @@ class RayTool extends DrawingTool {
         double intersectionY = startPoint.dy + t * dy;
         if (intersectionY >= chartTop && intersectionY <= chartBottom) {
           intersections.add(Offset(0, intersectionY));
-          debugPrint('与左边界交点: (0, $intersectionY)');
+          _logV('与左边界交点: (0, $intersectionY)');
         }
       }
     }
@@ -1751,7 +1664,7 @@ class RayTool extends DrawingTool {
         double intersectionY = startPoint.dy + t * dy;
         if (intersectionY >= chartTop && intersectionY <= chartBottom) {
           intersections.add(Offset(canvasWidth, intersectionY));
-          debugPrint('与右边界交点: ($canvasWidth, $intersectionY)');
+          _logV('与右边界交点: ($canvasWidth, $intersectionY)');
         }
       }
     }
@@ -1763,7 +1676,7 @@ class RayTool extends DrawingTool {
         double intersectionX = startPoint.dx + t * dx;
         if (intersectionX >= 0 && intersectionX <= canvasWidth) {
           intersections.add(Offset(intersectionX, chartTop));
-          debugPrint('与K线上边界交点: ($intersectionX, $chartTop)');
+          _logV('与K线上边界交点: ($intersectionX, $chartTop)');
         }
       }
     }
@@ -1775,12 +1688,12 @@ class RayTool extends DrawingTool {
         double intersectionX = startPoint.dx + t * dx;
         if (intersectionX >= 0 && intersectionX <= canvasWidth) {
           intersections.add(Offset(intersectionX, chartBottom));
-          debugPrint('与K线下边界交点: ($intersectionX, $chartBottom)');
+          _logV('与K线下边界交点: ($intersectionX, $chartBottom)');
         }
       }
     }
 
-    debugPrint('在K线主图区域找到 ${intersections.length} 个交点');
+    _logV('在K线主图区域找到 ${intersections.length} 个交点');
 
     // 选择最近的交点作为终点
     if (intersections.isNotEmpty) {
@@ -1794,115 +1707,12 @@ class RayTool extends DrawingTool {
       final closestPoint = intersections.first;
       final distance = (closestPoint - startPoint).distance;
 
-      debugPrint('选择最近的交点: $closestPoint，距离: $distance');
+      _logV('选择最近的交点: $closestPoint，距离: $distance');
       return closestPoint;
     }
 
-    debugPrint('未在K线主图区域找到交点');
+    _logV('未在K线主图区域找到交点');
     return null;
-  }
-
-  // 注：旧的_calculateRayEndPoint方法已被_calculateRayEndPointFullScreen替代
-  Offset? _calculateRayEndPoint(Offset startPoint, double dx, double dy,
-      double canvasWidth, double chartTop, double chartBottom) {
-    // 处理各种特殊情况
-    if (dx == 0 && dy == 0) {
-      debugPrint('方向向量为零，无法计算射线');
-      return null;
-    }
-
-    // 使用放大的参数来计算射线的终点，保证可以到达边界
-    const double rayLength = 10000; // 足够大的值保证可以到达任意边界
-
-    // 单位化方向向量
-    final length =
-        (dx * dx + dy * dy).abs() > 0 ? (dx * dx + dy * dy).abs() : 1.0;
-    final normalizedDx = dx / length;
-    final normalizedDy = dy / length;
-
-    // 计算射线的理论终点（很远的位置）
-    final theoreticalEndX = startPoint.dx + normalizedDx * rayLength;
-    final theoreticalEndY = startPoint.dy + normalizedDy * rayLength;
-
-    debugPrint(
-        '射线方向计算: dx=$dx, dy=$dy, 理论终点=($theoreticalEndX, $theoreticalEndY)');
-
-    // 计算与边界的交点
-    List<Offset> intersections = [];
-
-    // 与各个边界计算交点
-
-    // 1. 与左边界的交点 (x = 0)
-    if (dx != 0) {
-      double t = (0 - startPoint.dx) / dx;
-      if (t > 0.001) {
-        // 小的正值阿值防止数值误差
-        double intersectionY = startPoint.dy + t * dy;
-        if (intersectionY >= chartTop && intersectionY <= chartBottom) {
-          intersections.add(Offset(0, intersectionY));
-          debugPrint('与左边界交点: (0, $intersectionY)');
-        }
-      }
-    }
-
-    // 2. 与右边界的交点 (x = canvasWidth)
-    if (dx != 0) {
-      double t = (canvasWidth - startPoint.dx) / dx;
-      if (t > 0.001) {
-        double intersectionY = startPoint.dy + t * dy;
-        if (intersectionY >= chartTop && intersectionY <= chartBottom) {
-          intersections.add(Offset(canvasWidth, intersectionY));
-          debugPrint('与右边界交点: ($canvasWidth, $intersectionY)');
-        }
-      }
-    }
-
-    // 3. 与上边界的交点 (y = chartTop)
-    if (dy != 0) {
-      double t = (chartTop - startPoint.dy) / dy;
-      if (t > 0.001) {
-        double intersectionX = startPoint.dx + t * dx;
-        if (intersectionX >= 0 && intersectionX <= canvasWidth) {
-          intersections.add(Offset(intersectionX, chartTop));
-          debugPrint('与上边界交点: ($intersectionX, $chartTop)');
-        }
-      }
-    }
-
-    // 4. 与下边界的交点 (y = chartBottom)
-    if (dy != 0) {
-      double t = (chartBottom - startPoint.dy) / dy;
-      if (t > 0.001) {
-        double intersectionX = startPoint.dx + t * dx;
-        if (intersectionX >= 0 && intersectionX <= canvasWidth) {
-          intersections.add(Offset(intersectionX, chartBottom));
-          debugPrint('与下边界交点: ($intersectionX, $chartBottom)');
-        }
-      }
-    }
-
-    debugPrint('找到 ${intersections.length} 个交点');
-
-    // 选择最近的交点作为终点
-    if (intersections.isNotEmpty) {
-      // 按距离排序，选择最近的交点
-      intersections.sort((a, b) {
-        double distA = (a - startPoint).distance;
-        double distB = (b - startPoint).distance;
-        return distA.compareTo(distB);
-      });
-
-      final closestPoint = intersections.first;
-      final distance = (closestPoint - startPoint).distance;
-
-      debugPrint('选择最近的交点: $closestPoint，距离: $distance');
-      return closestPoint;
-    }
-
-    debugPrint('未找到任何交点，返回理论终点');
-    // 如果没有找到交点，返回理论终点（这种情况不太可能发生）
-    return Offset(theoreticalEndX.clamp(0, canvasWidth),
-        theoreticalEndY.clamp(chartTop, chartBottom));
   }
 
   /// 绘制虚线
@@ -2011,11 +1821,11 @@ class CrossLineTool extends DrawingTool {
   @override
   void draw(Canvas canvas, Size size, double scaleX, double scrollX,
       double Function(double) getX, double Function(double) getY) {
-    debugPrint(
+    _logV(
         'CrossLineTool.draw 开始: id=$id, state=$state, 逻辑坐标 centerIndex=$centerIndex, centerPrice=$centerPrice');
 
     if (centerIndex == null || centerPrice == null) {
-      debugPrint('CrossLineTool.draw: 没有中心点逻辑坐标数据');
+      _logV('CrossLineTool.draw: 没有中心点逻辑坐标数据');
       return;
     }
 
@@ -2030,11 +1840,11 @@ class CrossLineTool extends DrawingTool {
       final centerScreenX = getX(centerIndex!);
       final centerScreenY = getY(centerPrice!);
 
-      debugPrint(
+      _logV(
           'CrossLineTool.draw: 中心点 逻辑($centerIndex, $centerPrice) -> 屏幕($centerScreenX, $centerScreenY)');
 
       if (!centerScreenX.isFinite || !centerScreenY.isFinite) {
-        debugPrint('警告：无效的中心点屏幕坐标');
+        _logV('警告：无效的中心点屏幕坐标');
         return;
       }
 
@@ -2049,12 +1859,12 @@ class CrossLineTool extends DrawingTool {
 
       final mainChartBottom = mainChartTop + mainHeight;
 
-      debugPrint(
+      _logV(
           '十字线主图区域计算: top=$mainChartTop, bottom=$mainChartBottom, height=$mainHeight');
 
       // 检查十字线中心点是否在主图区域内
       if (centerScreenY < mainChartTop || centerScreenY > mainChartBottom) {
-        debugPrint(
+        _logV(
             '十字线超出K线区域边界，不绘制: centerScreenY=$centerScreenY, 边界范围[$mainChartTop, $mainChartBottom]');
         return; // 超出边界时完全不绘制
       }
@@ -2063,8 +1873,8 @@ class CrossLineTool extends DrawingTool {
           Offset(centerScreenX, mainChartBottom), paint);
       drawStyledLine(canvas, Offset(0, centerScreenY),
           Offset(size.width, centerScreenY), paint);
-    } catch (e) {
-      debugPrint('CrossLineTool.draw 绘制异常: $e');
+    } catch (e, s) {
+      kchartLog('CrossLineTool.draw 绘制异常: $e', error: e, stackTrace: s);
     }
   }
 
