@@ -354,7 +354,7 @@ class _KChartWidgetState extends State<KChartWidget>
   @override
   void initState() {
     super.initState();
-    mInfoWindowStream = StreamController<InfoWindowEntity?>();
+    mInfoWindowStream = StreamController<InfoWindowEntity?>.broadcast();
     _currentScale = mScaleX;
 
     // 初始化绘图工具管理器
@@ -1908,8 +1908,8 @@ class _KChartWidgetState extends State<KChartWidget>
                   return;
                 }
 
-                // Web端：禁用单指缩放，只允许滚轮缩放
-                if (kIsWeb) {
+                // Web端：允许单指拖动平移；禁用多指手势缩放（仍可用滚轮缩放）
+                if (kIsWeb && details.pointerCount >= 2) {
                   return;
                 }
 
@@ -1957,8 +1957,8 @@ class _KChartWidgetState extends State<KChartWidget>
                   return;
                 }
 
-                // Web端：禁用手势缩放，只允许滚轮缩放
-                if (kIsWeb) {
+                // Web端：允许单指拖动平移；禁用多指手势缩放（仍可用滚轮缩放）
+                if (kIsWeb && details.pointerCount >= 2) {
                   return;
                 }
 
@@ -2029,8 +2029,10 @@ class _KChartWidgetState extends State<KChartWidget>
                   return;
                 }
 
-                // Web端：直接返回
-                if (kIsWeb) {
+                // Web端：不处理多指缩放结束，但需要正确结束拖动状态
+                if (kIsWeb && details.pointerCount >= 2) {
+                  isScale = false;
+                  _onDragChanged(false);
                   return;
                 }
 
