@@ -815,7 +815,7 @@ class _KChartWidgetState extends State<KChartWidget>
       kLineData: widget.datas,
       scaleX: mScaleX,
       scrollX: mScrollX,
-      getX: (index) => _painter?.getX(index.toInt()) ?? 0,
+      getX: (index) => _indexToScreenX(index),
       getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
       getPriceFromY: (screenY) =>
           _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
@@ -845,7 +845,7 @@ class _KChartWidgetState extends State<KChartWidget>
       kLineData: widget.datas,
       scaleX: mScaleX,
       scrollX: mScrollX,
-      getX: (index) => _painter?.getX(index.toInt()) ?? 0,
+      getX: (index) => _indexToScreenX(index),
       getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
       getPriceFromY: (screenY) =>
           _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
@@ -884,7 +884,7 @@ class _KChartWidgetState extends State<KChartWidget>
       kLineData: widget.datas,
       scaleX: mScaleX,
       scrollX: mScrollX,
-      getX: (index) => _painter?.getX(index.toInt()) ?? 0,
+      getX: (index) => _indexToScreenX(index),
       getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
       getPriceFromY: (screenY) =>
           _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
@@ -1492,7 +1492,7 @@ class _KChartWidgetState extends State<KChartWidget>
         kLineData: widget.datas,
         scaleX: mScaleX,
         scrollX: mScrollX,
-        getX: (index) => _painter?.getX(index.toInt()) ?? 0,
+        getX: (index) => _indexToScreenX(index),
         getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
         getPriceFromY: (screenY) =>
             _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
@@ -1652,7 +1652,7 @@ class _KChartWidgetState extends State<KChartWidget>
                   kLineData: widget.datas,
                   scaleX: mScaleX,
                   scrollX: mScrollX,
-                  getX: (index) => _painter?.getX(index.toInt()) ?? 0,
+                  getX: (index) => _indexToScreenX(index),
                   getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
                   getPriceFromY: (screenY) =>
                       _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
@@ -1713,7 +1713,7 @@ class _KChartWidgetState extends State<KChartWidget>
                 kLineData: widget.datas,
                 scaleX: mScaleX,
                 scrollX: mScrollX,
-                getX: (index) => _painter?.getX(index.toInt()) ?? 0,
+                getX: (index) => _indexToScreenX(index),
                 getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
                 getPriceFromY: (screenY) =>
                     _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,
@@ -1745,7 +1745,7 @@ class _KChartWidgetState extends State<KChartWidget>
                     kLineData: widget.datas,
                     scaleX: mScaleX,
                     scrollX: mScrollX,
-                    getX: (index) => _painter?.getX(index.toInt()) ?? 0,
+                    getX: (index) => _indexToScreenX(index),
                     getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
                     getPriceFromY: (screenY) =>
                         _painter?.mMainRenderer.getYFromPrice(screenY) ??
@@ -1804,7 +1804,7 @@ class _KChartWidgetState extends State<KChartWidget>
                   kLineData: widget.datas,
                   scaleX: mScaleX,
                   scrollX: mScrollX,
-                  getX: (index) => _painter?.getX(index.toInt()) ?? 0,
+                  getX: (index) => _indexToScreenX(index),
                   getY: (price) => _painter?.mMainRenderer.getY(price) ?? 0,
                   getPriceFromY: (screenY) =>
                       _painter?.mMainRenderer.getYFromPrice(screenY) ?? screenY,

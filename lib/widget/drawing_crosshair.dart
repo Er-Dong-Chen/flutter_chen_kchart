@@ -95,9 +95,12 @@ class DrawingCrosshairPainter extends CustomPainter {
       ..style = PaintingStyle.fill
       ..isAntiAlias = true;
 
-    canvas.drawCircle(position, 10.0, innerFillPaint);
-    canvas.drawCircle(position, 10.0, outerPaint);
-    canvas.drawCircle(position, 2.2, dotPaint);
+    const outerRadius = 4.0;
+    const dotRadius = 1.6;
+    outerPaint.strokeWidth = 1.2;
+    canvas.drawCircle(position, outerRadius, innerFillPaint);
+    canvas.drawCircle(position, outerRadius, outerPaint);
+    canvas.drawCircle(position, dotRadius, dotPaint);
   }
 
   /// 绘制虚线
