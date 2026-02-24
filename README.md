@@ -25,6 +25,8 @@
 
 ### [🌐 在线演示 / Online Demo](https://er-dong-chen.github.io/flutter_chen_kchart/)
 
+### [🌐 App演示 / App Demo](https://www.pgyer.com/kchart-android)
+
 <div style="display: flex; justify-content: space-between;">
   <img src="https://er-dong-chen.github.io/images/demo/kchart.gif" alt="基础K线图表" style="width: 48%;">
   <img src="https://er-dong-chen.github.io/images/demo/kchart_select.gif" alt="交互选择功能" style="width: 48%;">
@@ -255,7 +257,7 @@ KChartWidget(
 
 ### v2.x 商用版计划
 - [x] v2.0.0 - 绘图工具及模式套件、TradingView交互体验
-- [ ] 绘图新增完善
+- [x] 绘图新增完善
 - [ ] 高级技术指标
 - [ ] 完全对标TradingView/主流交易所KChart
 
